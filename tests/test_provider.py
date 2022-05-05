@@ -1,12 +1,10 @@
-from pathlib import Path
+import time
 
 import pytest
-from ape.utils import DEFAULT_TEST_MNEMONIC
-from evm_trace import TraceFrame
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
-from ape_foundry.providers import HARDHAT_CHAIN_ID, HARDHAT_CONFIG_FILE_NAME, FoundryProvider
+from ape_foundry.providers import FOUNDRY_CHAIN_ID, FoundryProvider
 from tests.conftest import get_foundry_provider
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
@@ -23,15 +21,9 @@ def test_connect_and_disconnect(network_api):
     foundry.port = 8555
     foundry.connect()
 
-    # Verify config file got created
-    config = Path(HARDHAT_CONFIG_FILE_NAME)
-    config_text = config.read_text()
-    assert config.exists()
-    assert DEFAULT_TEST_MNEMONIC in config_text
-
     try:
         assert foundry.is_connected
-        assert foundry.chain_id == HARDHAT_CHAIN_ID
+        assert foundry.chain_id == FOUNDRY_CHAIN_ID
     finally:
         foundry.disconnect()
 
@@ -68,23 +60,30 @@ def test_rpc_methods(foundry_connected, method, args, expected):
     assert method(foundry_connected, *args) == expected
 
 
-def test_multiple_foundry_instances(network_api):
+def test_multiple_instances(network_api):
     """
     Validate the somewhat tricky internal logic of running multiple Foundry subprocesses
     under a single parent process.
     """
     # instantiate the providers (which will start the subprocesses) and validate the ports
     provider_1 = get_foundry_provider(network_api)
-    provider_2 = get_foundry_provider(network_api)
-    provider_3 = get_foundry_provider(network_api)
     provider_1.port = 8556
-    provider_2.port = 8557
-    provider_3.port = 8558
     provider_1.connect()
-    provider_2.connect()
-    provider_3.connect()
 
-    # The web3 clients must be different in the HH provider instances (compared to the
+    # NOTE: Sleep because Foundry is fast and we want the chains to have different hashes
+    time.sleep(1)
+
+    provider_2 = get_foundry_provider(network_api)
+    provider_2.port = 8557
+    provider_2.connect()
+    time.sleep(1)
+
+    provider_3 = get_foundry_provider(network_api)
+    provider_3.port = 8558
+    provider_3.connect()
+    time.sleep(1)
+
+    # The web3 clients must be different in the provider instances (compared to the
     # behavior of the EthereumProvider base class, where it's a shared classvar)
     assert provider_1._web3 != provider_2._web3 != provider_3._web3
 
@@ -101,11 +100,9 @@ def test_multiple_foundry_instances(network_api):
     assert hash_1 != hash_2 != hash_3
 
 
-def test_set_block_gas_limit(foundry_connected):
-    gas_limit = foundry_connected.get_block("latest").gas_data.gas_limit
-    assert foundry_connected.set_block_gas_limit(gas_limit) is True
-
-
+@pytest.mark.xfail(
+    reason="Waiting for https://github.com/foundry-rs/foundry/issues/1511 to be resolved"
+)
 def test_set_timestamp(foundry_connected):
     start_time = foundry_connected.get_block("pending").timestamp
     foundry_connected.set_timestamp(start_time + 5)  # Increase by 5 seconds
@@ -142,12 +139,6 @@ def test_snapshot_and_revert(foundry_connected):
 
 
 def test_unlock_account(foundry_connected):
-    assert foundry_connected.unlock_account(TEST_WALLET_ADDRESS) is True
+    actual = foundry_connected.unlock_account(TEST_WALLET_ADDRESS)
+    assert actual is True
     assert TEST_WALLET_ADDRESS in foundry_connected.unlocked_accounts
-
-
-def test_get_transaction_trace(foundry_connected, sender, receiver):
-    transfer = sender.transfer(receiver, 1)
-    logs = foundry_connected.get_transaction_trace(transfer.txn_hash)
-    for log in logs:
-        assert isinstance(log, TraceFrame)

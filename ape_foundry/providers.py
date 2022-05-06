@@ -2,7 +2,7 @@ import random
 import shutil
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, Iterator, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from ape._compat import Literal
 from ape.api import (
@@ -27,70 +27,18 @@ from ape.logging import logger
 from ape.types import AddressType, SnapshotID
 from ape.utils import cached_property, gas_estimation_error_message
 from ape_test import Config as TestConfig
-from evm_trace import TraceFrame
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
+from web3.middleware import geth_poa_middleware
 
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
-HARDHAT_START_NETWORK_RETRIES = [0.1, 0.2, 0.3, 0.5, 1.0]  # seconds between network retries
-HARDHAT_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess before giving up
+FOUNDRY_START_NETWORK_RETRIES = [0.1, 0.2, 0.3, 0.5, 1.0]  # seconds between network retries
+FOUNDRY_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess before giving up
 DEFAULT_PORT = 8545
-HARDHAT_CHAIN_ID = 31337
-HARDHAT_CONFIG = """
-// See https://foundry.org/config/ for config options.
-module.exports = {{
-  networks: {{
-    foundry: {{
-      hardfork: "london",
-      // Base fee of 0 allows use of 0 gas price when testing
-      initialBaseFeePerGas: 0,
-      accounts: {{
-        mnemonic: "{mnemonic}",
-        path: "m/44'/60'/0'",
-        count: {number_of_accounts}
-      }}
-    }},
-  }},
-}};
-"""
-HARDHAT_CONFIG_FILE_NAME = "foundry.config.js"
-
-
-class FoundryConfigJS:
-    """
-    A class representing the actual ``foundry.config.js`` file.
-    """
-
-    FILE_NAME = "foundry.config.js"
-
-    def __init__(
-        self,
-        project_path: Path,
-        mnemonic: str,
-        num_of_accounts: int,
-        hard_fork: Optional[str] = None,
-    ):
-        self._base_path = project_path
-        self._mnemonic = mnemonic
-        self._num_of_accounts = num_of_accounts
-        self._hard_fork = hard_fork or "london"
-
-    @property
-    def _content(self) -> str:
-        return HARDHAT_CONFIG.format(
-            mnemonic=self._mnemonic, number_of_accounts=self._num_of_accounts
-        )
-
-    @property
-    def _path(self) -> Path:
-        return self._base_path / self.FILE_NAME
-
-    def write_if_not_exists(self):
-        if not self._path.is_file():
-            self._path.write_text(self._content)
+FOUNDRY_CHAIN_ID = 31337
 
 
 class FoundryForkConfig(PluginConfig):
@@ -102,8 +50,8 @@ class FoundryNetworkConfig(PluginConfig):
     port: Optional[Union[int, Literal["auto"]]] = DEFAULT_PORT
 
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
-    network_retries: List[float] = HARDHAT_START_NETWORK_RETRIES
-    process_attempts: int = HARDHAT_START_PROCESS_ATTEMPTS
+    network_retries: List[float] = FOUNDRY_START_NETWORK_RETRIES
+    process_attempts: int = FOUNDRY_START_PROCESS_ATTEMPTS
 
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryMainnetForkProvider.
@@ -133,14 +81,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def process_name(self) -> str:
-        return "Foundry node"
+        return "anvil"
 
     @property
     def chain_id(self) -> int:
         if hasattr(self._web3, "eth"):
-            return self._web3.eth.chain_id
+            return self._web3.eth.chain_id  # type: ignore
         else:
-            return HARDHAT_CHAIN_ID
+            return FOUNDRY_CHAIN_ID
 
     @cached_property
     def anvil_bin(self) -> str:
@@ -185,12 +133,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def connect(self):
         """
         Start the foundry process and verify it's up and accepting connections.
+        **NOTE**: Must set port before calling 'super().connect()'.
         """
 
-        js_config = FoundryConfigJS(self.project_folder, self.mnemonic, self.number_of_accounts)
-        js_config.write_if_not_exists()
-
-        # NOTE: Must set port before calling 'super().connect()'.
         if not self.port:
             self.port = self.config.port  # type: ignore
 
@@ -206,7 +151,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if not self._web3:
                     self._start()
                 else:
-                    # The user configured a port and the foundry process was already running.
+                    # The user configured a port and the anvil process was already running.
                     logger.info(
                         f"Connecting to existing '{self.process_name}' at port '{self.port}'."
                     )
@@ -220,7 +165,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         # so we don't keep retrying.
                         raise
                     except SubprocessError as exc:
-                        logger.info("Retrying Foundry subprocess startup: %r", exc)
+                        logger.info("Retrying anvil subprocess startup: %r", exc)
                         self.port = None
 
     def _set_web3(self):
@@ -258,7 +203,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     port = random.randint(EPHEMERAL_PORTS_START, EPHEMERAL_PORTS_END)
                     attempts += 1
                     if attempts == max_attempts:
-                        ports_str = ", ".join(self.attempted_ports)
+                        ports_str = ", ".join([str(p) for p in self.attempted_ports])
                         raise FoundryProviderError(
                             f"Unable to find an available port. Ports tried: {ports_str}"
                         )
@@ -277,14 +222,17 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return [
             self.anvil_bin,
             "--port",
-            str(self.port),
+            f"{self.port}",
+            "--mnemonic",
+            self.mnemonic,
+            "--accounts",
+            f"{self.number_of_accounts}",
+            "--derivation-path",
+            "m/44'/60'/0'",
         ]
 
     def _make_request(self, rpc: str, args: list) -> Any:
         return self._web3.manager.request_blocking(rpc, args)  # type: ignore
-
-    def set_block_gas_limit(self, gas_limit: int) -> bool:
-        return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)])
 
     def set_timestamp(self, new_timestamp: int):
         pending_timestamp = self.get_block("pending").timestamp
@@ -293,7 +241,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def mine(self, num_blocks: int = 1):
         for i in range(num_blocks):
-            self._make_request("evm_mine", [])
+            self._make_request("evm_mine", [1])
 
     def snapshot(self) -> str:
         result = self._make_request("evm_snapshot", [])
@@ -306,12 +254,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._make_request("evm_revert", [snapshot_id])
 
     def unlock_account(self, address: AddressType) -> bool:
-        result = self._make_request("foundry_impersonateAccount", [address])
-
-        if result:
-            self.unlocked_accounts.append(address)
-
-        return result
+        self._make_request("anvil_impersonateAccount", [address])
+        self.unlocked_accounts.append(address)
+        return True
 
     def estimate_gas_cost(self, txn: TransactionAPI) -> int:
         """
@@ -355,31 +300,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
             )
 
-        else:
-            try:
-                receipt = super().send_transaction(txn)
-            except ValueError as err:
-                raise _get_vm_error(err) from err
+        try:
+            receipt = super().send_transaction(txn)
+        except ValueError as err:
+            raise _get_vm_error(err) from err
 
         receipt.raise_for_status()
         return receipt
 
-    def get_transaction_trace(self, txn_hash: str) -> Iterator[TraceFrame]:
-        """
-        Provide a detailed description of opcodes.
 
-        Args:
-            txn_hash (str): The hash of a transaction to trace.
-
-        Returns:
-            Iterator(TraceFrame): Transaction execution trace object.
-        """
-        logs = self._make_request("debug_traceTransaction", [txn_hash]).structLogs
-        for log in logs:
-            yield TraceFrame(**log)
-
-
-class FoundryMainnetForkProvider(FoundryProvider):
+class FoundryForkProvider(FoundryProvider):
     """
     A Foundry provider that uses ``--fork``, like:
     ``npx foundry node --fork <upstream-provider-url>``.
@@ -427,15 +357,19 @@ class FoundryMainnetForkProvider(FoundryProvider):
 
         # Verify that we're connected to a Foundry node with mainnet-fork mode.
         self._upstream_provider.connect()
+        upstream_chain_id = self._upstream_provider.chain_id
         upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash
         self._upstream_provider.disconnect()
+
+        # If upstream network is rinkeby, goerli, or kovan (PoA test-nets)
+        if upstream_chain_id in (4, 5, 42):
+            self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
         if self.get_block(0).hash != upstream_genesis_block_hash:
-            # self.disconnect()
             logger.warning(
                 "Upstream network has mismatching genesis block. "
                 "This could be an issue with foundry."
             )
-            # raise FoundryProviderError(f"Upstream network is not {self._upstream_network_name}")
 
     def build_command(self) -> List[str]:
         if not isinstance(self._upstream_provider, UpstreamProvider):
@@ -443,13 +377,13 @@ class FoundryMainnetForkProvider(FoundryProvider):
                 f"Provider '{self._upstream_provider.name}' is not an upstream provider."
             )
 
-        fork_url = self._upstream_provider.connection_str
+        fork_url = self._upstream_provider.connection_str  # type: ignore
         if not fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 
         if fork_url.replace("localhost", "127.0.0.1") == self.uri:
             raise FoundryProviderError(
-                "Invalid upstream-fork URL. Can't be same as local Foundry node."
+                "Invalid upstream-fork URL. Can't be same as local anvil node."
             )
 
         cmd = super().build_command()

@@ -80,6 +80,9 @@ def foundry_connected_from_ape():
         yield provider
 
 
+@pytest.mark.skip(
+    reason="Waiting for this to be resolved: https://github.com/foundry-rs/foundry/issues/1514"
+)
 def test_send_transaction(contract_instance, owner):
     contract_instance.set_number(10, sender=owner)
     assert contract_instance.my_number() == 10

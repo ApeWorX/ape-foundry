@@ -292,8 +292,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._make_request("evm_increaseTime", [seconds_to_increase])
 
     def mine(self, num_blocks: int = 1):
-        for i in range(num_blocks):
-            self._make_request("evm_mine", [])
+        self._make_request("evm_mine", [{"blocks": num_blocks}])
 
     def snapshot(self) -> str:
         result = self._make_request("evm_snapshot", [])

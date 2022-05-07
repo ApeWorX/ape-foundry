@@ -7,7 +7,7 @@ from ape import plugins
 from ape.api.networks import LOCAL_NETWORK_NAME
 
 from .providers import (
-    FoundryMainnetForkProvider,
+    FoundryForkProvider,
     FoundryNetworkConfig,
     FoundryProvider,
     FoundryProviderError,
@@ -23,9 +23,9 @@ def config_class():
 @plugins.register(plugins.ProviderPlugin)
 def providers():
     yield "ethereum", LOCAL_NETWORK_NAME, FoundryProvider
-    yield "ethereum", "mainnet-fork", FoundryMainnetForkProvider
+    yield "ethereum", "mainnet-fork", FoundryForkProvider
     yield "fantom", LOCAL_NETWORK_NAME, FoundryProvider
-    yield "fantom", "opera-fork", FoundryMainnetForkProvider
+    yield "fantom", "opera-fork", FoundryForkProvider
 
 
 __all__ = [

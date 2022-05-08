@@ -114,7 +114,7 @@ def test_set_timestamp(foundry_connected):
 
 def test_mine(foundry_connected):
     block_num = foundry_connected.get_block("latest").number
-    foundry_connected.mine()
+    foundry_connected.mine(100)
     next_block_num = foundry_connected.get_block("latest").number
     assert next_block_num > block_num
 

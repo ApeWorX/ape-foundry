@@ -434,3 +434,8 @@ class FoundryForkProvider(FoundryProvider):
             cmd.extend(("--fork-block-number", str(self.fork_block_number)))
 
         return cmd
+
+    def reset_fork(self):
+        self._make_request(
+            "anvil_reset", [{"jsonRpcUrl": self.fork_url, "blockNumber": self.fork_block_number}]
+        )

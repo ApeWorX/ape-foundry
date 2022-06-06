@@ -235,9 +235,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._web3.manager.request_blocking(rpc, args)  # type: ignore
 
     def set_timestamp(self, new_timestamp: int):
-        pending_timestamp = self.get_block("pending").timestamp
-        seconds_to_increase = new_timestamp - pending_timestamp
-        self._make_request("evm_increaseTime", [seconds_to_increase])
+        self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
         self._make_request("evm_mine", [{"blocks": num_blocks}])

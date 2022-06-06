@@ -264,7 +264,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         try:
             return super().estimate_gas_cost(txn)
         except ValueError as err:
-            tx_error = _get_vm_error(err)
+            tx_error = self.get_virtual_machine_error(err)
 
             # If this is the cause of a would-be revert,
             # raise ContractLogicError so that we can confirm tx-reverts.
@@ -291,7 +291,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             try:
                 txn_hash = self._web3.eth.send_transaction(txn_dict)  # type: ignore
             except ValueError as err:
-                raise _get_vm_error(err) from err
+                raise self.get_virtual_machine_error(err) from err
 
             receipt = self.get_transaction(
                 txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
@@ -300,10 +300,38 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         try:
             receipt = super().send_transaction(txn)
         except ValueError as err:
-            raise _get_vm_error(err) from err
+            raise self.get_virtual_machine_error(err) from err
 
         receipt.raise_for_status()
         return receipt
+
+    def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
+        if not len(exception.args):
+            return VirtualMachineError(base_err=exception)
+
+        err_data = exception.args[0]
+        if not isinstance(err_data, dict):
+            return VirtualMachineError(base_err=exception)
+
+        message = str(err_data.get("message"))
+        if not message:
+            return VirtualMachineError(base_err=exception)
+
+        # Handle `ContactLogicError` similarly to other providers in `ape`.
+        # by stripping off the unnecessary prefix that foundry has on reverts.
+        foundry_prefix = (
+            "Error: VM Exception while processing transaction: reverted with reason string "
+        )
+        if message.startswith(foundry_prefix):
+            message = message.replace(foundry_prefix, "").strip("'")
+            return ContractLogicError(revert_message=message)
+        elif "Transaction reverted without a reason string" in message:
+            return ContractLogicError()
+
+        elif message == "Transaction ran out of gas":
+            return OutOfGasError()  # type: ignore
+
+        return VirtualMachineError(message=message)
 
 
 class FoundryForkProvider(FoundryProvider):
@@ -390,32 +418,3 @@ class FoundryForkProvider(FoundryProvider):
             cmd.extend(("--fork-block-number", str(fork_block_number)))
 
         return cmd
-
-
-def _get_vm_error(web3_value_error: ValueError) -> TransactionError:
-    if not len(web3_value_error.args):
-        return VirtualMachineError(base_err=web3_value_error)
-
-    err_data = web3_value_error.args[0]
-    if not isinstance(err_data, dict):
-        return VirtualMachineError(base_err=web3_value_error)
-
-    message = str(err_data.get("message"))
-    if not message:
-        return VirtualMachineError(base_err=web3_value_error)
-
-    # Handle `ContactLogicError` similarly to other providers in `ape`.
-    # by stripping off the unnecessary prefix that foundry has on reverts.
-    foundry_prefix = (
-        "Error: VM Exception while processing transaction: reverted with reason string "
-    )
-    if message.startswith(foundry_prefix):
-        message = message.replace(foundry_prefix, "").strip("'")
-        return ContractLogicError(revert_message=message)
-    elif "Transaction reverted without a reason string" in message:
-        return ContractLogicError()
-
-    elif message == "Transaction ran out of gas":
-        return OutOfGasError()
-
-    return VirtualMachineError(message=message)

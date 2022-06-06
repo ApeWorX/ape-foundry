@@ -4,7 +4,7 @@ Foundry network provider plugin for Ape. Foundry is a development framework writ
 
 ## Dependencies
 
-* [python3](https://www.python.org/downloads) version 3.7 or greater, python3-dev
+* [python3](https://www.python.org/downloads) version 3.7.2 or greater, python3-dev
 * Foundry. See Foundry's [Installation](https://github.com/foundry-rs/foundry#installation>) documentation for steps.
 
 ## Installation
@@ -29,14 +29,7 @@ python3 setup.py install
 
 ## Quick Usage
 
-To use the plugin, first install Foundry locally into your Ape project directory:
-
-```bash
-cd your-ape-project
-npm install --save-dev foundry
-```
-
-After that, you can use the ``--network ethereum:development:foundry`` command line flag to use the foundry network (if it's not already configured as the default).
+Use the ``--network ethereum:local:foundry`` command line flag to use the foundry network (if it's not already configured as the default).
 
 This network provider takes additional Foundry-specific configuration options. To use them, add these configs in your project's ``ape-config.yaml``:
 

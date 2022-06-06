@@ -1,11 +1,12 @@
+import tempfile
 import time
+from pathlib import Path
 
 import pytest
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.providers import FOUNDRY_CHAIN_ID, FoundryProvider
-from tests.conftest import get_foundry_provider
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -14,10 +15,10 @@ def test_instantiation(foundry_disconnected):
     assert foundry_disconnected.name == "foundry"
 
 
-def test_connect_and_disconnect(network_api):
+def test_connect_and_disconnect(get_foundry_provider):
     # Use custom port to prevent connecting to a port used in another test.
 
-    foundry = get_foundry_provider(network_api)
+    foundry = get_foundry_provider()
     foundry.port = 8555
     foundry.connect()
 
@@ -60,25 +61,25 @@ def test_rpc_methods(foundry_connected, method, args, expected):
     assert method(foundry_connected, *args) == expected
 
 
-def test_multiple_instances(network_api):
+def test_multiple_instances(get_foundry_provider):
     """
     Validate the somewhat tricky internal logic of running multiple Foundry subprocesses
     under a single parent process.
     """
     # instantiate the providers (which will start the subprocesses) and validate the ports
-    provider_1 = get_foundry_provider(network_api)
+    provider_1 = get_foundry_provider()
     provider_1.port = 8556
     provider_1.connect()
 
     # NOTE: Sleep because Foundry is fast and we want the chains to have different hashes
     time.sleep(1)
 
-    provider_2 = get_foundry_provider(network_api)
+    provider_2 = get_foundry_provider()
     provider_2.port = 8557
     provider_2.connect()
     time.sleep(1)
 
-    provider_3 = get_foundry_provider(network_api)
+    provider_3 = get_foundry_provider()
     provider_3.port = 8558
     provider_3.connect()
     time.sleep(1)
@@ -139,3 +140,16 @@ def test_unlock_account(foundry_connected):
     actual = foundry_connected.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
     assert TEST_WALLET_ADDRESS in foundry_connected.unlocked_accounts
+
+
+def test_request_timeout(foundry_connected, config, get_foundry_provider):
+    actual = foundry_connected.web3.provider._request_kwargs["timeout"]  # type: ignore
+    expected = 29  # Value set in `ape-config.yaml`
+    assert actual == expected
+
+    # Test default behavior
+    with tempfile.TemporaryDirectory() as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        with config.using_project(temp_dir):
+            provider = get_foundry_provider()
+            assert provider.timeout == 30

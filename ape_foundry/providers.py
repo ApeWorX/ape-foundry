@@ -52,6 +52,8 @@ class FoundryNetworkConfig(PluginConfig):
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
     network_retries: List[float] = FOUNDRY_START_NETWORK_RETRIES
     process_attempts: int = FOUNDRY_START_PROCESS_ATTEMPTS
+    request_timeout: int = 30
+    fork_request_timeout: int = 300
 
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryMainnetForkProvider.
@@ -82,6 +84,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @property
     def process_name(self) -> str:
         return "anvil"
+
+    @property
+    def timeout(self) -> int:
+        return self.config.request_timeout  # type: ignore
 
     @property
     def chain_id(self) -> int:
@@ -172,7 +178,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not self.port:
             return
 
-        self._web3 = Web3(HTTPProvider(self.uri))
+        self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
         if not self._web3.isConnected():
             self._web3 = None
             return
@@ -296,11 +302,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             receipt = self.get_transaction(
                 txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
             )
-
-        try:
-            receipt = super().send_transaction(txn)
-        except ValueError as err:
-            raise self.get_virtual_machine_error(err) from err
+        else:
+            try:
+                receipt = super().send_transaction(txn)
+            except ValueError as err:
+                raise self.get_virtual_machine_error(err) from err
 
         receipt.raise_for_status()
         return receipt
@@ -343,6 +349,18 @@ class FoundryForkProvider(FoundryProvider):
     section of your ``ape-config.yaml` file to specify which provider
     to use as your archive node.
     """
+
+    @property
+    def fork_url(self) -> str:
+        return self._upstream_provider.connection_str  # type: ignore
+
+    @property
+    def fork_block_number(self) -> Optional[int]:
+        return self._fork_config.block_number
+
+    @property
+    def timeout(self) -> int:
+        return self.config.fork_request_timeout  # type: ignore
 
     @property
     def _upstream_network_name(self) -> str:
@@ -402,19 +420,17 @@ class FoundryForkProvider(FoundryProvider):
                 f"Provider '{self._upstream_provider.name}' is not an upstream provider."
             )
 
-        fork_url = self._upstream_provider.connection_str  # type: ignore
-        if not fork_url:
+        if not self.fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 
-        if fork_url.replace("localhost", "127.0.0.1") == self.uri:
+        if self.fork_url.replace("localhost", "127.0.0.1") == self.uri:
             raise FoundryProviderError(
                 "Invalid upstream-fork URL. Can't be same as local anvil node."
             )
 
         cmd = super().build_command()
-        cmd.extend(("--fork-url", fork_url))
-        fork_block_number = self._fork_config.block_number
-        if fork_block_number is not None:
-            cmd.extend(("--fork-block-number", str(fork_block_number)))
+        cmd.extend(("--fork-url", self.fork_url))
+        if self.fork_block_number is not None:
+            cmd.extend(("--fork-block-number", str(self.fork_block_number)))
 
         return cmd

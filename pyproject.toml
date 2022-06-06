@@ -14,12 +14,11 @@ write_to = "ape_foundry/version.py"
 
 [tool.black]
 line-length = 100
-target-version = ['py37', 'py38', 'py39']
+target-version = ['py37', 'py38', 'py39', 'py310']
 include = '\.pyi?$'
 
 [tool.pytest.ini_options]
 addopts = """
-    -n auto
     -p no:ape_test
     --cov-branch
     --cov-report term
@@ -29,7 +28,10 @@ addopts = """
 """
 python_files = "test_*.py"
 testpaths = "tests"
-markers = "fuzzing: Run Hypothesis fuzz test suite"
+markers = """
+fuzzing: Run Hypothesis fuzz test suite
+fork: Run forked-network tests using Alchemy as the upstream provider
+"""
 
 [tool.isort]
 line_length = 100

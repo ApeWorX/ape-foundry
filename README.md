@@ -47,6 +47,14 @@ foundry:
 
 This is useful for multiprocessing and starting up multiple providers.
 
+You can also adjust the request timeout setting:
+
+```yaml
+hardhat:
+  request_timeout: 20  # Defaults to 30
+  fork_request_timeout: 600  # Defaults to 300
+```
+
 ## Mainnet Fork
 
 The ``ape-foundry`` plugin also includes a mainnet fork provider. It requires using another provider that has access to mainnet.
@@ -65,6 +73,7 @@ foundry:
     ethereum:
       mainnet:
         upstream_provider: alchemy
+
 ```
 
 Otherwise, it defaults to the default mainnet provider plugin. You can also specify a ``block_number``.

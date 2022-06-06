@@ -100,9 +100,6 @@ def test_multiple_instances(network_api):
     assert hash_1 != hash_2 != hash_3
 
 
-@pytest.mark.xfail(
-    reason="Waiting for https://github.com/foundry-rs/foundry/issues/1511 to be resolved"
-)
 def test_set_timestamp(foundry_connected):
     start_time = foundry_connected.get_block("pending").timestamp
     foundry_connected.set_timestamp(start_time + 5)  # Increase by 5 seconds

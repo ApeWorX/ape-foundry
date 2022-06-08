@@ -56,7 +56,7 @@ class FoundryNetworkConfig(PluginConfig):
     fork_request_timeout: int = 300
 
     # For setting the values in --fork and --fork-block-number command arguments.
-    # Used only in FoundryMainnetForkProvider.
+    # Used only in FoundryForkProvider.
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
     fork: Dict[str, Dict[str, FoundryForkConfig]] = {}
 
@@ -91,8 +91,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def chain_id(self) -> int:
-        if hasattr(self._web3, "eth"):
-            return self._web3.eth.chain_id  # type: ignore
+        if hasattr(self.web3, "eth"):
+            return self.web3.eth.chain_id
         else:
             return FOUNDRY_CHAIN_ID
 
@@ -129,6 +129,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def is_connected(self) -> bool:
+        if self._web3 is not None and self._web3.isConnected():
+            return True
+
         self._set_web3()
         return self._web3 is not None
 
@@ -182,6 +185,18 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not self._web3.isConnected():
             self._web3 = None
             return
+
+        # Wait for 'Listening on '
+        counter = 0
+        while True:
+            line = self.process.stdout.readline()
+
+            if line.decode("utf8").lower().startswith("listening on "):
+                break
+
+            counter += 1
+            if counter == 1000:
+                raise ProviderError("Anvil never 'listening'.")
 
         # Verify is actually a Foundry provider,
         # or else skip it to possibly try another port.
@@ -238,7 +253,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         ]
 
     def _make_request(self, rpc: str, args: list) -> Any:
-        return self._web3.manager.request_blocking(rpc, args)  # type: ignore
+        return self.web3.manager.request_blocking(rpc, args)  # type: ignore
 
     def set_timestamp(self, new_timestamp: int):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
@@ -292,6 +307,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
+            txn = self.prepare_transaction(txn)
             txn_dict = txn.dict()
 
             try:
@@ -316,10 +332,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return VirtualMachineError(base_err=exception)
 
         err_data = exception.args[0]
-        if not isinstance(err_data, dict):
-            return VirtualMachineError(base_err=exception)
+        message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
 
-        message = str(err_data.get("message"))
         if not message:
             return VirtualMachineError(base_err=exception)
 
@@ -331,7 +345,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
             return ContractLogicError(revert_message=message)
-        elif "Transaction reverted without a reason string" in message:
+
+        elif (
+            "Transaction reverted without a reason string" in message
+            or message.lower() == "execution reverted"
+        ):
             return ContractLogicError()
 
         elif message == "Transaction ran out of gas":
@@ -369,15 +387,6 @@ class FoundryForkProvider(FoundryProvider):
     @cached_property
     def _fork_config(self) -> FoundryForkConfig:
         config = cast(FoundryNetworkConfig, self.config)
-
-        # NOTE: Only for backwards compatibility
-        if "mainnet_fork" in config.dict():
-            logger.warning(
-                "Use of key `mainnet_fork` in `foundry` config is deprecated. "
-                "Please use the `fork` key, with `ecosystem` and `network` subkeys."
-            )
-            return FoundryForkConfig.parse_obj(config.dict().get("mainnet_fork"))
-
         ecosystem_name = self.network.ecosystem.name
         if ecosystem_name not in config.fork:
             return FoundryForkConfig()  # Just use default
@@ -392,13 +401,13 @@ class FoundryForkProvider(FoundryProvider):
     def _upstream_provider(self) -> ProviderAPI:
         upstream_network = self.network.ecosystem.networks[self._upstream_network_name]
         upstream_provider_name = self._fork_config.upstream_provider
-        # NOTE: if 'upstream_provider_name' is 'None', this gets the default mainnet provider.
+        # NOTE: if 'upstream_provider_name' is 'None', this gets the default upstream provider.
         return upstream_network.get_provider(provider_name=upstream_provider_name)
 
     def connect(self):
         super().connect()
 
-        # Verify that we're connected to a Foundry node with mainnet-fork mode.
+        # Verify that we're connected to a Foundry node with fork mode.
         self._upstream_provider.connect()
         upstream_chain_id = self._upstream_provider.chain_id
         upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash

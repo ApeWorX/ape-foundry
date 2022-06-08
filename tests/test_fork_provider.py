@@ -17,13 +17,9 @@ def mainnet_fork_network_api(networks):
 
 
 @pytest.fixture(scope="module")
-def connected_mainnet_fork_provider(networks, mainnet_fork_network_api):
-    provider = create_fork_provider(mainnet_fork_network_api)
-    provider.connect()
-    networks.active_provider = provider
-    yield provider
-    provider.disconnect()
-    networks.active_provider = None
+def connected_mainnet_fork_provider(networks):
+    with networks.parse_network_choice("ethereum:mainnet-fork:foundry") as provider:
+        yield provider
 
 
 @pytest.fixture(scope="module")
@@ -53,10 +49,10 @@ def test_fork_config(config, network):
 @pytest.mark.fork
 @pytest.mark.parametrize("upstream,port", [("mainnet", 8998), ("rinkeby", 8999)])
 def test_impersonate(networks, accounts, upstream, port):
+    orig_provider = networks.active_provider
     network_api = networks.ecosystems["ethereum"][f"{upstream}-fork"]
     provider = create_fork_provider(network_api, port)
     provider.connect()
-    orig_provider = networks.active_provider
     networks.active_provider = provider
 
     impersonated_account = accounts[TEST_ADDRESS]
@@ -99,7 +95,8 @@ def test_reset_fork(networks, mainnet_fork_network_api):
 
 
 @pytest.mark.fork
-def test_transaction(owner, fork_contract_instance):
+def test_transaction(connected_mainnet_fork_provider, owner, fork_contract_instance):
+    assert connected_mainnet_fork_provider.is_connected, "Provider disconnected from previous run."
     receipt = fork_contract_instance.setNumber(6, sender=owner)
     assert receipt.sender == owner
 
@@ -136,9 +133,9 @@ def test_transaction_contract_as_sender(fork_contract_instance):
 
 @pytest.mark.fork
 def test_transaction_unknown_contract_as_sender(accounts, networks, mainnet_fork_network_api):
+    init_provider = networks.active_provider
     provider = create_fork_provider(mainnet_fork_network_api, 9012)
     provider.connect()
-    init_provider = networks.active_provider
     networks.active_provider = provider
     multi_sig = accounts["0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"]
     multi_sig.transfer(accounts[0], "100 gwei")

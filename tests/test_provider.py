@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 
 import pytest
+from ape.exceptions import ContractLogicError, SignatureError
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
@@ -153,3 +154,20 @@ def test_request_timeout(foundry_connected, config, get_foundry_provider):
         with config.using_project(temp_dir):
             provider = get_foundry_provider()
             assert provider.timeout == 30
+
+
+def test_send_transaction(contract_instance, owner):
+    contract_instance.setNumber(10, sender=owner)
+    assert contract_instance.myNumber() == 10
+
+    # Have to be in the same test because of X-dist complications
+    with pytest.raises(SignatureError):
+        contract_instance.setNumber(20)
+
+
+def test_contract_revert_no_message(owner, contract_instance):
+    # The Contract raises empty revert when setting number to 5.
+    with pytest.raises(ContractLogicError) as err:
+        contract_instance.setNumber(5, sender=owner)
+
+    assert str(err.value) == "Transaction failed."

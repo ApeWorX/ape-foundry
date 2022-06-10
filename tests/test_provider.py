@@ -1,3 +1,4 @@
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -10,6 +11,11 @@ from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.providers import FOUNDRY_CHAIN_ID, FoundryProvider
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
+
+
+@pytest.fixture(scope="module")
+def call_expression():
+    return re.compile(r"CALL: 0x([a-f]|[A-F]|\d)*.<0x([a-f]|[A-F]|\d)*> \[\d* gas]")
 
 
 def test_instantiation(foundry_disconnected):
@@ -171,3 +177,8 @@ def test_contract_revert_no_message(owner, contract_instance):
         contract_instance.setNumber(5, sender=owner)
 
     assert str(err.value) == "Transaction failed."
+
+
+def test_get_call_tree(receipt, foundry_connected, call_expression):
+    actual = foundry_connected.get_call_tree(receipt.txn_hash)
+    assert call_expression.match(repr(actual))

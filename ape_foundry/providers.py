@@ -27,6 +27,7 @@ from ape.logging import logger
 from ape.types import AddressType, SnapshotID
 from ape.utils import cached_property, gas_estimation_error_message
 from ape_test import Config as TestConfig
+from evm_trace import CallTreeNode, ParityTrace, get_calltree_from_parity_trace
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -326,6 +327,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         receipt.raise_for_status()
         return receipt
+
+    def get_call_tree(self, txn_hash: str) -> CallTreeNode:
+        raw_trace_list = self._make_request("trace_transaction", [txn_hash])
+        trace_list = [ParityTrace.parse_obj(t) for t in raw_trace_list]
+        return get_calltree_from_parity_trace(trace_list[0], trace_list)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         if not len(exception.args):

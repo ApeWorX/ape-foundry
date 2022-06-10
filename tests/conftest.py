@@ -96,3 +96,8 @@ def foundry_disconnected(get_foundry_provider):
 def foundry_connected(networks):
     with networks.parse_network_choice("ethereum:local:foundry") as provider:
         yield provider
+
+
+@pytest.fixture(scope="session")
+def receipt(foundry_connected, owner, contract_instance):
+    return contract_instance.setNumber(6, sender=owner)

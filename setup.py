@@ -31,7 +31,7 @@ extras_require = {
         "twine",  # Package upload tool
     ],
     "dev": [
-        "commitizen>=2.24",  # Manage commits and publishing releases
+        "commitizen==2.19",  # Manage commits and publishing releases
         "pre-commit>=2.18",  # Ensure that linters are run prior to committing
         "IPython",  # Console for interacting
         "ipdb",  # Debugger (Must use `export PYTHONBREAKPOINT=ipdb.set_trace`)

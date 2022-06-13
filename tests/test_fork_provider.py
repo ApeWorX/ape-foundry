@@ -105,7 +105,10 @@ def test_transaction(connected_mainnet_fork_provider, owner, fork_contract_insta
 
 
 @pytest.mark.fork
-def test_revert(sender, fork_contract_instance):
+def test_revert(sender, fork_contract_instance, connected_mainnet_fork_provider):
+    connected_mainnet_fork_provider._s
+    fork_contract_instance.balance
+
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError) as err:
         fork_contract_instance.setNumber(6, sender=sender)
@@ -122,21 +125,27 @@ def test_contract_revert_no_message(owner, fork_contract_instance):
     assert str(err.value) == "Transaction failed."
 
 
+@pytest.mark.skip("Waiting for https://github.com/foundry-rs/foundry/issues/1943")
 @pytest.mark.fork
-def test_transaction_contract_as_sender(fork_contract_instance):
+def test_transaction_contract_as_sender(fork_contract_instance, connected_mainnet_fork_provider):
+    connected_mainnet_fork_provider.set_balance(fork_contract_instance, 10000)
+
     with pytest.raises(ContractLogicError) as err:
         # Task failed successfully
-        fork_contract_instance.setNumber(10, sender=fork_contract_instance)
+        fork_contract_instance.setNumber(10, sender=fork_contract_instance, gas_limit=1000000)
 
     assert str(err.value) == "!authorized"
 
 
+@pytest.mark.skip("Waiting for https://github.com/foundry-rs/foundry/issues/1943")
 @pytest.mark.fork
 def test_transaction_unknown_contract_as_sender(accounts, networks, mainnet_fork_network_api):
     init_provider = networks.active_provider
     provider = create_fork_provider(mainnet_fork_network_api, 9012)
     provider.connect()
     networks.active_provider = provider
-    multi_sig = accounts["0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"]
+    account = "0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"
+    multi_sig = accounts[account]
+    provider.set_balance(account, 10000)
     multi_sig.transfer(accounts[0], "100 gwei")
     networks.active_provider = init_provider

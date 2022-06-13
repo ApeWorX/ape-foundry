@@ -20,14 +20,13 @@ from ape.exceptions import (
     OutOfGasError,
     ProviderError,
     SubprocessError,
-    TransactionError,
     VirtualMachineError,
 )
 from ape.logging import logger
 from ape.types import AddressType, SnapshotID
-from ape.utils import cached_property, gas_estimation_error_message
+from ape.utils import cached_property
 from ape_test import Config as TestConfig
-from evm_trace import CallTreeNode, ParityTrace, get_calltree_from_parity_trace
+from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -253,6 +252,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
         ]
 
+    def set_balance(self, account: AddressType, balance: int):
+        self._make_request("anvil_setBalance", [account, balance])
+
     def _make_request(self, rpc: str, args: list) -> Any:
         return self.web3.manager.request_blocking(rpc, args)  # type: ignore
 
@@ -277,25 +279,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.unlocked_accounts.append(address)
         return True
 
-    def estimate_gas_cost(self, txn: TransactionAPI) -> int:
-        """
-        Generates and returns an estimate of how much gas is necessary
-        to allow the transaction to complete.
-        The transaction will not be added to the blockchain.
-        """
-        try:
-            return super().estimate_gas_cost(txn)
-        except ValueError as err:
-            tx_error = self.get_virtual_machine_error(err)
-
-            # If this is the cause of a would-be revert,
-            # raise ContractLogicError so that we can confirm tx-reverts.
-            if isinstance(tx_error, ContractLogicError):
-                raise tx_error from err
-
-            message = gas_estimation_error_message(tx_error)
-            raise TransactionError(base_err=tx_error, message=message) from err
-
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation
@@ -308,6 +291,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
+
             txn = self.prepare_transaction(txn)
             txn_dict = txn.dict()
 
@@ -320,18 +304,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
             )
         else:
-            try:
-                receipt = super().send_transaction(txn)
-            except ValueError as err:
-                raise self.get_virtual_machine_error(err) from err
+            receipt = super().send_transaction(txn)
 
         receipt.raise_for_status()
         return receipt
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
         raw_trace_list = self._make_request("trace_transaction", [txn_hash])
-        trace_list = [ParityTrace.parse_obj(t) for t in raw_trace_list]
-        return get_calltree_from_parity_trace(trace_list[0], trace_list)
+        trace_list = ParityTraceList.parse_obj(raw_trace_list)
+        return get_calltree_from_parity_trace(trace_list)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         if not len(exception.args):
@@ -362,6 +343,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return OutOfGasError()  # type: ignore
 
         return VirtualMachineError(message=message)
+
+    def set_code(self, address: AddressType, code: str):
+        self._make_request("anvil_setCode", [address, code])
 
 
 class FoundryForkProvider(FoundryProvider):

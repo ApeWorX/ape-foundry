@@ -72,7 +72,7 @@ setup(
         "evm-trace>=0.1.0.a6",
         "hexbytes",  # Use same as eth-ape
         "web3",  # Use same as eth-ape
-    ],  # NOTE: Add 3rd party libraries here
+    ],
     python_requires=">=3.7.2,<4",
     extras_require=extras_require,
     py_modules=["ape_foundry"],

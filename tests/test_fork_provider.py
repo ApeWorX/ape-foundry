@@ -3,40 +3,12 @@ from pathlib import Path
 
 import pytest
 from ape.exceptions import ContractLogicError
+from ape.types import AddressType
 from ape_ethereum.ecosystem import NETWORKS
-
-from ape_foundry.providers import FoundryForkProvider
+from eth_typing import HexAddress, HexStr
 
 TESTS_DIRECTORY = Path(__file__).parent
 TEST_ADDRESS = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
-
-
-@pytest.fixture(scope="module")
-def mainnet_fork_network_api(networks):
-    return networks.ecosystems["ethereum"]["mainnet-fork"]
-
-
-@pytest.fixture(scope="module")
-def connected_mainnet_fork_provider(networks):
-    with networks.parse_network_choice("ethereum:mainnet-fork:foundry") as provider:
-        yield provider
-
-
-@pytest.fixture(scope="module")
-def fork_contract_instance(owner, contract_container, connected_mainnet_fork_provider):
-    return owner.deploy(contract_container)
-
-
-def create_fork_provider(network_api, port=9001):
-    provider = FoundryForkProvider(
-        name="foundry",
-        network=network_api,
-        request_header={},
-        data_folder=Path("."),
-        provider_settings={},
-    )
-    provider.port = port
-    return provider
 
 
 @pytest.mark.parametrize("network", [k for k in NETWORKS.keys()])
@@ -48,7 +20,7 @@ def test_fork_config(config, network):
 
 @pytest.mark.fork
 @pytest.mark.parametrize("upstream,port", [("mainnet", 8998), ("rinkeby", 8999)])
-def test_impersonate(networks, accounts, upstream, port):
+def test_impersonate(networks, accounts, upstream, port, create_fork_provider):
     orig_provider = networks.active_provider
     network_api = networks.ecosystems["ethereum"][f"{upstream}-fork"]
     provider = create_fork_provider(network_api, port)
@@ -66,8 +38,8 @@ def test_impersonate(networks, accounts, upstream, port):
 
 
 @pytest.mark.fork
-def test_request_timeout(networks, config, mainnet_fork_network_api):
-    provider = create_fork_provider(mainnet_fork_network_api, 9008)
+def test_request_timeout(networks, config, mainnet_fork_network_api, create_fork_provider):
+    provider = create_fork_provider(port=9008)
     provider.connect()
     actual = provider.web3.provider._request_kwargs["timeout"]  # type: ignore
     expected = 360  # Value set in `ape-config.yaml`
@@ -78,13 +50,13 @@ def test_request_timeout(networks, config, mainnet_fork_network_api):
     with tempfile.TemporaryDirectory() as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         with config.using_project(temp_dir):
-            provider = create_fork_provider(mainnet_fork_network_api, 9011)
+            provider = create_fork_provider(port=9011)
             assert provider.timeout == 300
 
 
 @pytest.mark.fork
-def test_reset_fork(networks, mainnet_fork_network_api):
-    provider = create_fork_provider(mainnet_fork_network_api, 9010)
+def test_reset_fork(networks, create_fork_provider):
+    provider = create_fork_provider(port=9010)
     provider.connect()
     provider.mine()
     prev_block_num = provider.get_block("latest").number
@@ -106,9 +78,6 @@ def test_transaction(connected_mainnet_fork_provider, owner, fork_contract_insta
 
 @pytest.mark.fork
 def test_revert(sender, fork_contract_instance, connected_mainnet_fork_provider):
-    connected_mainnet_fork_provider._s
-    fork_contract_instance.balance
-
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError) as err:
         fork_contract_instance.setNumber(6, sender=sender)
@@ -125,27 +94,28 @@ def test_contract_revert_no_message(owner, fork_contract_instance):
     assert str(err.value) == "Transaction failed."
 
 
-@pytest.mark.skip("Waiting for https://github.com/foundry-rs/foundry/issues/1943")
 @pytest.mark.fork
-def test_transaction_contract_as_sender(fork_contract_instance, connected_mainnet_fork_provider):
-    connected_mainnet_fork_provider.set_balance(fork_contract_instance, 10000)
+def test_transaction_contract_as_sender(
+    fork_contract_instance, connected_mainnet_fork_provider, convert
+):
+    amount = convert("1000 ETH", int)
+    connected_mainnet_fork_provider.set_balance(fork_contract_instance.address, amount)
 
     with pytest.raises(ContractLogicError) as err:
         # Task failed successfully
-        fork_contract_instance.setNumber(10, sender=fork_contract_instance, gas_limit=1000000)
+        fork_contract_instance.setNumber(10, sender=fork_contract_instance)
 
     assert str(err.value) == "!authorized"
 
 
-@pytest.mark.skip("Waiting for https://github.com/foundry-rs/foundry/issues/1943")
 @pytest.mark.fork
-def test_transaction_unknown_contract_as_sender(accounts, networks, mainnet_fork_network_api):
+def test_transaction_unknown_contract_as_sender(accounts, networks, create_fork_provider, convert):
     init_provider = networks.active_provider
-    provider = create_fork_provider(mainnet_fork_network_api, 9012)
+    provider = create_fork_provider(port=9012)
     provider.connect()
     networks.active_provider = provider
-    account = "0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"
+    account = AddressType(HexAddress(HexStr("0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52")))
     multi_sig = accounts[account]
-    provider.set_balance(account, 10000)
+    provider.set_balance(account, convert("1000 ETH", int))
     multi_sig.transfer(accounts[0], "100 gwei")
     networks.active_provider = init_provider

@@ -31,6 +31,7 @@ testpaths = "tests"
 markers = """
 fuzzing: Run Hypothesis fuzz test suite
 fork: Run forked-network tests using Alchemy as the upstream provider
+manual: Tests you want to avoid running in automated CI/CD because of expense
 """
 
 [tool.isort]

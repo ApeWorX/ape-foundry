@@ -68,7 +68,7 @@ jobs:
           run: pip install .[test]
 
         - name: Run Tests
-          run: pytest -n auto -m "not fuzzing" -m "not fork"
+          run: pytest -n auto -m "not fork and not manual and not fuzzing"
 
         - name: Run Fork Tests
           run: pytest -m fork

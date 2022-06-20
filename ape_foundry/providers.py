@@ -186,7 +186,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3 = None
             return
 
-        # Wait for 'Listening on '
+        if not self.process:
+            # Connected to already-running process.
+            return
+
+        # Wait for 'Listening on ' to appear when first starting the process.
         counter = 0
         while True:
             line = self.process.stdout.readline()

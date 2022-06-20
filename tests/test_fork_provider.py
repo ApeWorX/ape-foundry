@@ -11,6 +11,22 @@ TESTS_DIRECTORY = Path(__file__).parent
 TEST_ADDRESS = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
 
 
+@pytest.fixture(scope="module")
+def mainnet_fork_network_api(networks):
+    return networks.ecosystems["ethereum"]["mainnet-fork"]
+
+
+@pytest.fixture(scope="module")
+def connected_mainnet_fork_provider(networks):
+    with networks.parse_network_choice("ethereum:mainnet-fork:foundry") as provider:
+        yield provider
+
+
+@pytest.fixture(scope="module")
+def fork_contract_instance(owner, contract_container, connected_mainnet_fork_provider):
+    return owner.deploy(contract_container)
+
+
 @pytest.mark.parametrize("network", [k for k in NETWORKS.keys()])
 def test_fork_config(config, network):
     plugin_config = config.get_config("foundry")
@@ -22,8 +38,7 @@ def test_fork_config(config, network):
 @pytest.mark.parametrize("upstream,port", [("mainnet", 8998), ("rinkeby", 8999)])
 def test_impersonate(networks, accounts, upstream, port, create_fork_provider):
     orig_provider = networks.active_provider
-    network_api = networks.ecosystems["ethereum"][f"{upstream}-fork"]
-    provider = create_fork_provider(network_api, port)
+    provider = create_fork_provider(port, upstream)
     provider.connect()
     networks.active_provider = provider
 
@@ -67,11 +82,9 @@ def test_reset_fork(networks, create_fork_provider):
 
 
 @pytest.mark.fork
-def test_transaction(connected_mainnet_fork_provider, owner, fork_contract_instance):
-    assert connected_mainnet_fork_provider.is_connected, "Provider disconnected from previous run."
+def test_send_transaction(connected_mainnet_fork_provider, owner, fork_contract_instance):
     receipt = fork_contract_instance.setNumber(6, sender=owner)
     assert receipt.sender == owner
-
     value = fork_contract_instance.myNumber()
     assert value == 6
 

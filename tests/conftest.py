@@ -85,7 +85,8 @@ def local_network_api(networks):
     return networks.ecosystems["ethereum"][LOCAL_NETWORK_NAME]
 
 
-@pytest.fixture(scope="session", params=("solidity", "vyper"))
+# @pytest.fixture(scope="session", params=("solidity", "vyper"))
+@pytest.fixture(scope="session", params=("vyper",))
 def raw_contract_type(request):
     path = BASE_CONTRACTS_PATH / "ethereum" / "local" / f"{request.param}_contract.json"
     return path.read_text()
@@ -118,23 +119,7 @@ def connected_provider(networks):
 
 
 @pytest.fixture(scope="session")
-def mainnet_fork_network_api(networks):
-    return networks.ecosystems["ethereum"]["mainnet-fork"]
-
-
-@pytest.fixture(scope="session")
-def connected_mainnet_fork_provider(networks):
-    with networks.parse_network_choice("ethereum:mainnet-fork:foundry") as provider:
-        yield provider
-
-
-@pytest.fixture(scope="session")
-def fork_contract_instance(owner, contract_container, connected_mainnet_fork_provider):
-    return owner.deploy(contract_container)
-
-
-@pytest.fixture(scope="session")
-def create_fork_provider():
+def create_fork_provider(networks):
     def method(port: int = 9001, network: str = "mainnet"):
         network_api = networks.ecosystems["ethereum"][f"{network}-fork"]
         provider = FoundryForkProvider(

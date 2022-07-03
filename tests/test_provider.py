@@ -174,7 +174,7 @@ def test_send_transaction(contract_instance, owner):
 def test_revert(sender, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError) as err:
-        contract_instance.setNumber(6, sender=sender, gas_limit=100000)
+        contract_instance.setNumber(6, sender=sender)
 
     assert str(err.value) == "!authorized"
 

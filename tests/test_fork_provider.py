@@ -129,6 +129,6 @@ def test_transaction_unknown_contract_as_sender(accounts, networks, create_fork_
     networks.active_provider = provider
     account = AddressType(HexAddress(HexStr("0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52")))
     multi_sig = accounts[account]
-    provider.set_balance(account, convert("1000 ETH", int))
+    # provider.set_balance(account, convert("1000 ETH", int))
     multi_sig.transfer(accounts[0], "100 gwei")
     networks.active_provider = init_provider

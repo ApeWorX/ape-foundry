@@ -27,6 +27,7 @@ from ape.types import AddressType, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
+from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -122,10 +123,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def priority_fee(self) -> int:
-        """
-        Priority fee not needed in development network.
-        """
-        return 0
+        return self.conversion_manager.convert("2 gwei", int)
 
     @property
     def is_connected(self) -> bool:
@@ -190,18 +188,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Connected to already-running process.
             return
 
-        # Wait for 'Listening on ' to appear when first starting the process.
-        counter = 0
-        while True:
-            line = self.process.stdout.readline()
-
-            if line.decode("utf8").lower().startswith("listening on "):
-                break
-
-            counter += 1
-            if counter == 1000:
-                raise ProviderError("Anvil never 'listening'.")
-
         # Verify is actually a Foundry provider,
         # or else skip it to possibly try another port.
         client_version = self._web3.clientVersion
@@ -257,7 +243,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         ]
 
     def set_balance(self, account: AddressType, balance: int):
-        self._make_request("anvil_setBalance", [account, balance])
+        if isinstance(balance, int):
+            # Anvil expects str int for balance
+            balance_value = HexBytes(balance).hex()
+        else:
+            balance_value = str(balance)
+
+        self._make_request("anvil_setBalance", [account, balance_value])
 
     def _make_request(self, rpc: str, args: list) -> Any:
         return self.web3.manager.request_blocking(rpc, args)  # type: ignore
@@ -345,6 +337,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         elif message == "Transaction ran out of gas":
             return OutOfGasError()  # type: ignore
+
+        elif message.startswith("execution reverted: "):
+            raise ContractLogicError(message.replace("execution reverted: ", "").strip())
 
         return VirtualMachineError(message=message)
 

@@ -6,6 +6,7 @@ from hexbytes import HexBytes
 from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.providers import FOUNDRY_CHAIN_ID, FoundryProvider
 from tests.conftest import get_foundry_provider
+from ape import chain
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -139,3 +140,9 @@ def test_unlock_account(foundry_connected):
     actual = foundry_connected.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
     assert TEST_WALLET_ADDRESS in foundry_connected.unlocked_accounts
+
+def test_timestamp_does_not_decrease(foundry_connected):
+    before = chain.pending_timestamp
+    chain.mine()
+    after = chain.pending_timestamp
+    assert before <= after

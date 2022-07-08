@@ -6,7 +6,7 @@ EVM_VERSION_BY_NETWORK = {
         "mainnet": {
             0: "frontier",
             1150000: "homestead",
-            4370000: "byzantine",  # foundry uses this name for the byzantium fork
+            4370000: "byzantium",
             7280000: "petersburg",
             9069000: "istanbul",
             9200000: "muirglacier",
@@ -15,7 +15,7 @@ EVM_VERSION_BY_NETWORK = {
         },
         "ropsten": {
             0: "homestead",
-            1700000: "byzantine",
+            1700000: "byzantium",
             4230000: "constantinople",
             4939394: "petersburg",
             6485846: "istanbul",
@@ -25,7 +25,7 @@ EVM_VERSION_BY_NETWORK = {
         },
         "rinkeby": {
             1: "homestead",
-            1035301: "byzantine",
+            1035301: "byzantium",
             3660663: "constantinople",
             4321234: "petersburg",
             5435345: "istanbul",

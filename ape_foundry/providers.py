@@ -33,6 +33,8 @@ from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 
+from ape_foundry.constants import EVM_VERSION_BY_NETWORK
+
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
 
 EPHEMERAL_PORTS_START = 49152
@@ -41,22 +43,6 @@ FOUNDRY_START_NETWORK_RETRIES = [0.1, 0.2, 0.3, 0.5, 1.0]  # seconds between net
 FOUNDRY_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess before giving up
 DEFAULT_PORT = 8545
 FOUNDRY_CHAIN_ID = 31337
-EVM_VERSION_BY_NETWORK = {
-    "ethereum": {
-        "mainnet": {
-            0: "frontier",
-            1_150_000: "homestead",
-            2_463_000: "tangerine",
-            2_675_000: "spuriousdragon",
-            4_370_000: "byzantine",
-            7_280_000: "petersburg",
-            9_069_000: "istanbul",
-            9_200_000: "muirglacier",
-            12_244_000: "berlin",
-            12_965_000: "london",
-        }
-    }
-}
 
 
 class FoundryForkConfig(PluginConfig):

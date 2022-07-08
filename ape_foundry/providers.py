@@ -33,7 +33,7 @@ from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
-from web3.types import RPCEndpoint, TxParams
+from web3.types import RPCEndpoint
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
@@ -45,6 +45,8 @@ FOUNDRY_START_NETWORK_RETRIES = [0.1, 0.2, 0.3, 0.5, 1.0]  # seconds between net
 FOUNDRY_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess before giving up
 DEFAULT_PORT = 8545
 FOUNDRY_CHAIN_ID = 31337
+
+logger.set_level("DEBUG")
 
 
 class FoundryForkConfig(PluginConfig):
@@ -312,13 +314,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
             sender = to_checksum_address(sender)  # For mypy
             txn = self.prepare_transaction(txn)
-            txn_dict = txn.dict()
             original_code = self.get_code(sender)
             if original_code:
                 self.set_code(sender, "")
 
             try:
-                txn_hash = self.web3.eth.send_transaction(TxParams(txn_dict))
+                txn_hash = self.web3.eth.send_transaction(txn.dict())  # type: ignore
                 receipt = self.get_transaction(
                     txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
                 )

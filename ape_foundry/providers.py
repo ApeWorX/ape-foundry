@@ -59,6 +59,7 @@ FORKS_BY_CHAIN_ID = {
 class FoundryForkConfig(PluginConfig):
     upstream_provider: Optional[str] = None
     block_number: Optional[int] = None
+    evm_version: Optional[str] = None
 
 
 class FoundryNetworkConfig(PluginConfig):

@@ -1,5 +1,6 @@
 import random
 import shutil
+from bisect import bisect_right
 from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, List, Optional, Union, cast
@@ -32,6 +33,8 @@ from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 
+from ape_foundry.constants import EVM_VERSION_BY_NETWORK
+
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
 
 EPHEMERAL_PORTS_START = 49152
@@ -45,6 +48,7 @@ FOUNDRY_CHAIN_ID = 31337
 class FoundryForkConfig(PluginConfig):
     upstream_provider: Optional[str] = None
     block_number: Optional[int] = None
+    evm_version: Optional[str] = None
 
 
 class FoundryNetworkConfig(PluginConfig):
@@ -365,6 +369,21 @@ class FoundryForkProvider(FoundryProvider):
     def fork_block_number(self) -> Optional[int]:
         return self._fork_config.block_number
 
+    def detect_evm_version(self) -> Optional[str]:
+        if self.fork_block_number is None:
+            return None
+
+        ecosystem = self._upstream_provider.network.ecosystem.name
+        network = self._upstream_provider.network.name
+        try:
+            hardforks = EVM_VERSION_BY_NETWORK[ecosystem][network]
+        except KeyError:
+            return None
+
+        keys = sorted(hardforks)
+        index = bisect_right(keys, self.fork_block_number) - 1
+        return hardforks[keys[index]]
+
     @property
     def timeout(self) -> int:
         return self.config.fork_request_timeout  # type: ignore
@@ -430,6 +449,12 @@ class FoundryForkProvider(FoundryProvider):
         cmd.extend(("--fork-url", self.fork_url))
         if self.fork_block_number is not None:
             cmd.extend(("--fork-block-number", str(self.fork_block_number)))
+
+            if self._fork_config.evm_version is None:
+                self._fork_config.evm_version = self.detect_evm_version()
+
+        if self._fork_config.evm_version is not None:
+            cmd.extend(("--hardfork", self._fork_config.evm_version))
 
         return cmd
 

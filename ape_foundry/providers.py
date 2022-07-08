@@ -47,8 +47,6 @@ FOUNDRY_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess bef
 DEFAULT_PORT = 8545
 FOUNDRY_CHAIN_ID = 31337
 
-logger.set_level("DEBUG")
-
 
 class FoundryForkConfig(PluginConfig):
     upstream_provider: Optional[str] = None
@@ -214,9 +212,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             raise ProviderError(
                 f"Port '{self.port}' already in use by another process that isn't a Foundry node."
             )
-        import time
-
-        time.sleep(3)
 
     def _start(self):
         use_random_port = self.port == "auto"
@@ -243,13 +238,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.attempted_ports.append(self.port)
         self.start()
 
-    # def disconnect(self):
-    #     self._web3 = None
-    #     self.port = None
-    #     super().disconnect()
+    def disconnect(self):
+        self._web3 = None
+        self.port = None
+        super().disconnect()
 
     def build_command(self) -> List[str]:
-        cmd = [
+        return [
             self.anvil_bin,
             "--port",
             f"{self.port}",
@@ -260,7 +255,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--derivation-path",
             "m/44'/60'/0'",
         ]
-        return cmd
 
     def set_balance(self, account: AddressType, balance: int):
         if hasattr(account, "address"):

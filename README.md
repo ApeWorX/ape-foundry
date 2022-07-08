@@ -50,7 +50,7 @@ This is useful for multiprocessing and starting up multiple providers.
 You can also adjust the request timeout setting:
 
 ```yaml
-hardhat:
+foundry:
   request_timeout: 20  # Defaults to 30
   fork_request_timeout: 600  # Defaults to 300
 ```

@@ -128,6 +128,10 @@ def test_revert_failure(connected_provider):
     assert connected_provider.revert(0xFFFF) is False
 
 
+def test_get_balance(connected_provider, owner):
+    assert connected_provider.get_balance(owner)
+
+
 def test_snapshot_and_revert(connected_provider):
     snap = connected_provider.snapshot()
 

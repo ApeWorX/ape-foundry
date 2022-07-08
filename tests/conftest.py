@@ -37,6 +37,11 @@ def config():
 
 
 @pytest.fixture(scope="session")
+def project():
+    return ape.project
+
+
+@pytest.fixture(scope="session")
 def accounts():
     return ape.accounts.test_accounts
 

@@ -39,7 +39,7 @@ def contract_a(owner, connected_provider):
         return ContractType.parse_raw((base_path / f"contract_{suffix}.json").read_text())
 
     contract_c = owner.deploy(ContractContainer(get_contract_type("c")))
-    contract_b = owner.deploy(ContractContainer(get_contract_type("b")), contract_c.address)
+    contract_b = owner.deploy(ContractContainer(get_contract_type("b")), contract_c)
     contract_a = owner.deploy(
         ContractContainer(get_contract_type("a")), contract_b.address, contract_c.address
     )

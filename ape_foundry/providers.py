@@ -26,11 +26,13 @@ from ape.logging import logger
 from ape.types import AddressType, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
+from eth_utils import to_checksum_address
 from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
+from web3.types import RPCEndpoint, TxParams
 
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
 
@@ -184,6 +186,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3 = None
             return
 
+        try:
+            self._web3.eth.get_block_number()
+        except Exception:
+            # Not yet ready
+            self._web3 = None
+            return
+
         if not self.process:
             # Connected to already-running process.
             return
@@ -198,6 +207,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             raise ProviderError(
                 f"Port '{self.port}' already in use by another process that isn't a Foundry node."
             )
+        import time
+
+        time.sleep(3)
 
     def _start(self):
         use_random_port = self.port == "auto"
@@ -224,13 +236,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.attempted_ports.append(self.port)
         self.start()
 
-    def disconnect(self):
-        self._web3 = None
-        self.port = None
-        super().disconnect()
+    # def disconnect(self):
+    #     self._web3 = None
+    #     self.port = None
+    #     super().disconnect()
 
     def build_command(self) -> List[str]:
-        return [
+        cmd = [
             self.anvil_bin,
             "--port",
             f"{self.port}",
@@ -241,8 +253,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--derivation-path",
             "m/44'/60'/0'",
         ]
+        return cmd
 
     def set_balance(self, account: AddressType, balance: int):
+        if hasattr(account, "address"):
+            account = account.address  # type: ignore
+
         if isinstance(balance, int):
             # Anvil expects str int for balance
             balance_value = HexBytes(balance).hex()
@@ -251,24 +267,27 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         self._make_request("anvil_setBalance", [account, balance_value])
 
-    def _make_request(self, rpc: str, args: list) -> Any:
-        return self.web3.manager.request_blocking(rpc, args)  # type: ignore
-
     def set_timestamp(self, new_timestamp: int):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
-        self._make_request("evm_mine", [{"blocks": num_blocks}])
+        result = self._make_request("evm_mine", [{"blocks": num_blocks}])
+        if result.get("result") != "0x0":
+            raise ProviderError(f"Failed to mine.\n{result}")
 
     def snapshot(self) -> str:
         result = self._make_request("evm_snapshot", [])
-        return str(result)
+        if "result" not in result:
+            raise ProviderError(f"Failed to get snapshot ID.\n{result}")
 
-    def revert(self, snapshot_id: SnapshotID):
-        if isinstance(snapshot_id, str) and snapshot_id.isnumeric():
-            snapshot_id = int(snapshot_id)  # type: ignore
+        return result["result"]
 
-        return self._make_request("evm_revert", [snapshot_id])
+    def revert(self, snapshot_id: SnapshotID) -> bool:
+        if isinstance(snapshot_id, int):
+            snapshot_id = HexBytes(snapshot_id).hex()
+
+        result = self._make_request("evm_revert", [snapshot_id])
+        return result.get("result") is True
 
     def unlock_account(self, address: AddressType) -> bool:
         self._make_request("anvil_impersonateAccount", [address])
@@ -280,33 +299,49 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         Creates a new message call transaction or a contract creation
         for signed transactions.
         """
-
         sender = txn.sender
         if sender:
             sender = self.conversion_manager.convert(txn.sender, AddressType)
 
-        if sender in self.unlocked_accounts:
+        if sender and sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
 
+            sender = to_checksum_address(sender)  # For mypy
             txn = self.prepare_transaction(txn)
             txn_dict = txn.dict()
+            original_code = self.get_code(sender)
+            if original_code:
+                self.set_code(sender, "")
 
             try:
-                txn_hash = self._web3.eth.send_transaction(txn_dict)  # type: ignore
+                txn_hash = self.web3.eth.send_transaction(TxParams(txn_dict))
+                receipt = self.get_transaction(
+                    txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
+                )
             except ValueError as err:
                 raise self.get_virtual_machine_error(err) from err
-
-            receipt = self.get_transaction(
-                txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
-            )
+            finally:
+                if original_code:
+                    self.set_code(sender, original_code.hex())
         else:
             receipt = super().send_transaction(txn)
 
         receipt.raise_for_status()
         return receipt
 
+    def get_balance(self, address: str) -> int:
+        # NOTE: Original `web3.eth.get_balance` fails when using Anvil.
+        if hasattr(address, "address"):
+            address = address.address  # type: ignore
+
+        result = self._make_request("eth_getBalance", [address, "latest"]).get("result")
+        if not result:
+            raise ProviderError(f"Failed to get balance for account '{address}'.")
+
+        return int(result, 16) if isinstance(result, str) else result
+
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
-        raw_trace_list = self._make_request("trace_transaction", [txn_hash])
+        raw_trace_list = self._make_request("trace_transaction", [txn_hash]).get("result", [])
         trace_list = ParityTraceList.parse_obj(raw_trace_list)
         return get_calltree_from_parity_trace(trace_list)
 
@@ -345,6 +380,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def set_code(self, address: AddressType, code: str):
         self._make_request("anvil_setCode", [address, code])
+
+    def _make_request(self, rpc: str, args: list) -> Any:
+        return self.web3.provider.make_request(RPCEndpoint(rpc), args)
 
 
 class FoundryForkProvider(FoundryProvider):

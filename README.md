@@ -76,7 +76,9 @@ foundry:
 
 ```
 
-Otherwise, it defaults to the default mainnet provider plugin. You can also specify a ``block_number``.
+Otherwise, it defaults to the default mainnet provider plugin. You can also specify a ``block_number`` and ``evm_version``.
+
+If the block number is specified, but no EVM version is specified, it is automatically set based on the block height for known networks.
 
 **NOTE**: Make sure you have the upstream provider plugin installed for ape.
 

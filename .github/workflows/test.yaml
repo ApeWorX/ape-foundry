@@ -69,12 +69,15 @@ jobs:
 
         - name: Run Tests
           run: pytest -n auto -m "not fork and not manual and not fuzzing"
+          env:
+            RUST_BACKTRACE: 1
 
         - name: Run Fork Tests
           run: |
             pytest -m fork
           env:
             WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}
+            RUST_BACKTRACE: 1
 
 # NOTE: uncomment this block after you've marked tests with @pytest.mark.fuzzing
 #    fuzzing:

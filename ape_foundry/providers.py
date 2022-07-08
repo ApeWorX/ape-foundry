@@ -189,7 +189,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
-        time.sleep(0.4)  # Add more latency before checking connection.
+        time.sleep(0.5)
         if not self._web3.isConnected():
             self._web3 = None
             return
@@ -318,6 +318,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
             try:
                 txn_hash = self.web3.eth.send_transaction(txn.dict())  # type: ignore
+                time.sleep(0.5)
                 receipt = self.get_transaction(
                     txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
                 )
@@ -340,7 +341,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         timeout = self.config_manager.transaction_acceptance_timeout
         receipt_data = self.web3.eth.wait_for_transaction_receipt(
-            HexBytes(txn_hash), timeout=timeout, poll_latency=1
+            HexBytes(txn_hash), timeout=timeout, poll_latency=0.5
         )
         txn = self.web3.eth.get_transaction(txn_hash)  # type: ignore
         receipt = self.network.ecosystem.decode_receipt(

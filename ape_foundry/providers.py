@@ -1,5 +1,6 @@
 import random
 import shutil
+import time
 from bisect import bisect_right
 from pathlib import Path
 from subprocess import PIPE, call
@@ -163,6 +164,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             if self.port:
                 self._set_web3()
                 if not self._web3:
+                    # Process attempts to get started at this point.
                     self._start()
                 else:
                     # The user configured a port and the anvil process was already running.
@@ -187,6 +189,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
+        time.sleep(0.4)  # Add more latency before checking connection.
         if not self._web3.isConnected():
             self._web3 = None
             return

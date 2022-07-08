@@ -4,6 +4,7 @@
 EVM_VERSION_BY_NETWORK = {
     "ethereum": {
         "mainnet": {
+            0: "frontier",
             1150000: "homestead",
             4370000: "byzantine",  # foundry uses this name for the byzantium fork
             7280000: "petersburg",

@@ -21,6 +21,7 @@ from ape.exceptions import (
     OutOfGasError,
     ProviderError,
     SubprocessError,
+    TransactionError,
     VirtualMachineError,
 )
 from ape.logging import logger
@@ -333,6 +334,27 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         receipt.raise_for_status()
         return receipt
+
+    def get_transaction(self, txn_hash: str, required_confirmations: int = 0) -> ReceiptAPI:
+        # NOTE: Method is custom because it uses a higher poll_latency than what is in code Ape
+        # TODO: Add provider setting `txn_acceptance_check_poll_latency: float` in core ape.
+        if required_confirmations < 0:
+            raise TransactionError(message="Required confirmations cannot be negative.")
+
+        timeout = self.config_manager.transaction_acceptance_timeout
+        receipt_data = self.web3.eth.wait_for_transaction_receipt(
+            HexBytes(txn_hash), timeout=timeout, poll_latency=0.5
+        )
+        txn = self.web3.eth.get_transaction(txn_hash)  # type: ignore
+        receipt = self.network.ecosystem.decode_receipt(
+            {
+                "provider": self,
+                "required_confirmations": required_confirmations,
+                **txn,
+                **receipt_data,
+            }
+        )
+        return receipt.await_confirmations()
 
     def get_balance(self, address: str) -> int:
         # NOTE: Original `web3.eth.get_balance` fails when using Anvil.

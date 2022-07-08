@@ -71,7 +71,8 @@ jobs:
           run: pytest -n auto -m "not fork and not manual and not fuzzing"
 
         - name: Run Fork Tests
-          run: pytest -m fork
+          run: |
+            pytest -m fork
           env:
             WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}
 

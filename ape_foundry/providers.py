@@ -1,5 +1,6 @@
 import random
 import shutil
+from bisect import bisect_right
 from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, List, Optional, Union, cast
@@ -40,18 +41,20 @@ FOUNDRY_START_NETWORK_RETRIES = [0.1, 0.2, 0.3, 0.5, 1.0]  # seconds between net
 FOUNDRY_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess before giving up
 DEFAULT_PORT = 8545
 FOUNDRY_CHAIN_ID = 31337
-FORKS_BY_CHAIN_ID = {
-    1: {
-        0: "frontier",
-        1_150_000: "homestead",
-        2_463_000: "tangerine",
-        2_675_000: "spuriousdragon",
-        4_370_000: "byzantine",
-        7_280_000: "petersburg",
-        9_069_000: "istanbul",
-        9_200_000: "muirglacier",
-        12_244_000: "berlin",
-        12_965_000: "london",
+EVM_VERSION_BY_NETWORK = {
+    "ethereum": {
+        "mainnet": {
+            0: "frontier",
+            1_150_000: "homestead",
+            2_463_000: "tangerine",
+            2_675_000: "spuriousdragon",
+            4_370_000: "byzantine",
+            7_280_000: "petersburg",
+            9_069_000: "istanbul",
+            9_200_000: "muirglacier",
+            12_244_000: "berlin",
+            12_965_000: "london",
+        }
     }
 }
 
@@ -380,6 +383,21 @@ class FoundryForkProvider(FoundryProvider):
     def fork_block_number(self) -> Optional[int]:
         return self._fork_config.block_number
 
+    def detect_evm_version(self) -> Optional[str]:
+        if self.fork_block_number is None:
+            return None
+
+        ecosystem = self._upstream_provider.network.ecosystem.name
+        network = self._upstream_provider.network.name
+        try:
+            hardforks = EVM_VERSION_BY_NETWORK[ecosystem][network]
+        except KeyError:
+            return None
+
+        keys = sorted(hardforks)
+        index = bisect_right(keys, self.fork_block_number) - 1
+        return hardforks[keys[index]]
+
     @property
     def timeout(self) -> int:
         return self.config.fork_request_timeout  # type: ignore
@@ -445,6 +463,12 @@ class FoundryForkProvider(FoundryProvider):
         cmd.extend(("--fork-url", self.fork_url))
         if self.fork_block_number is not None:
             cmd.extend(("--fork-block-number", str(self.fork_block_number)))
+
+            if self._fork_config.evm_version is None:
+                self._fork_config.evm_version = self.detect_evm_version()
+
+        if self._fork_config.evm_version is not None:
+            cmd.extend(("--hardfork", self._fork_config.evm_version))
 
         return cmd
 

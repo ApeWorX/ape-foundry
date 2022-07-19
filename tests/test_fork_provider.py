@@ -56,7 +56,7 @@ def test_impersonate(connect_to, convert, accounts, upstream, port):
         impersonated_account = accounts[TEST_ADDRESS]
         provider.set_balance(impersonated_account, convert("10000 ETH", int))
         other_account = accounts[0]
-        receipt = impersonated_account.transfer(other_account, "1 wei")
+        receipt = impersonated_account.transfer(other_account, "10000 gwei")
         assert receipt.receiver == other_account
         assert receipt.sender == impersonated_account
 

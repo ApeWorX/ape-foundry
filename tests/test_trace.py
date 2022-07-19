@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from ape.contracts import ContractContainer
+from ape.logging import LogLevel, logger
 from ethpm_types import ContractType
 
 from .expected_traces import LOCAL_TRACE, MAINNET_FAIL_TRACE, MAINNET_TRACE
@@ -61,15 +62,21 @@ def trace_capture(capsys):
 
 
 def test_local_transaction_traces(local_receipt, trace_capture):
+    logger.set_level(LogLevel.INFO)
     local_receipt.show_trace()
-    assert all([x in LOCAL_TRACE for x in trace_capture()])
+    captured_trace = trace_capture()
+    assert all([x in LOCAL_TRACE for x in captured_trace])
 
     # Verify can happen more than once.
     local_receipt.show_trace()
-    assert all([x in LOCAL_TRACE for x in trace_capture()])
+    captured_trace = trace_capture()
+    assert all([x in LOCAL_TRACE for x in captured_trace])
+    logger.set_level(LogLevel.DEBUG)
 
 
 @pytest.mark.manual
 def test_mainnet_transaction_traces(mainnet_receipt, trace_capture):
+    logger.set_level(LogLevel.INFO)
     mainnet_receipt.show_trace()
     assert all([x in EXPECTED_MAP[mainnet_receipt.txn_hash] for x in trace_capture()])
+    logger.set_level(LogLevel.DEBUG)

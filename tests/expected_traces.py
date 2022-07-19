@@ -103,6 +103,53 @@ CALL:  AggregationRouterV4.<0x30786534>  [208466 gas]
     │       ) -> True [65595 gas]
     └── WETH.balanceOf(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640) -> 68359883632315875514968 [59578 gas]
 """
+MAINNET_FAIL_TRACE = """
+Call trace for '0x053cba5c12172654d894f66d5670bab6215517a94189a9ffc09bc40a589ec04d'
+reverted with message: "UNIV3R: min return"
+txn.origin=0xd2f91C13e2D7ABbA4408Cd3D86285b7835524ad7
+CALL:  AggregationRouterV4.<0x30786534>  [208466 gas]
+├── CALL: 0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5.<0x128acb08>  [235702 gas]
+│   ├── WETH.transfer(dst=AggregationRouterV4, wad=2098831888913057968) -> True [198998 gas]
+│   ├── XDEFI.balanceOf(account=0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5) -> 1300692354907962674610343 [166172 gas]
+│   │   └── (delegate) FixedToken.balanceOf(account=0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5) -> 1300692354907962674610343 [161021 gas]
+│   ├── AggregationRouterV4.uniswapV3SwapCallback(
+│   │     amount0Delta=12851675475480000000000,
+│   │     amount1Delta=-2098831888913057968,
+│   │     0x00..4ad7
+│   │   ) [157874 gas]
+│   │   ├── STATICCALL: 0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5.<0x0dfe1681>  [154703 gas]
+│   │   ├── STATICCALL: 0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5.<0xd21220a7>  [154293 gas]
+│   │   ├── STATICCALL: 0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5.<0xddca3f43>  [153845 gas]
+│   │   └── XDEFI.transferFrom(
+│   │         sender=tx.origin,
+│   │         recipient=0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5,
+│   │         amount=12851675475480000000000
+│   │       ) -> True [152092 gas]
+│   │       └── (delegate) FixedToken.transferFrom(
+│   │             sender=tx.origin,
+│   │             recipient=0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5,
+│   │             amount=12851675475480000000000
+│   │           ) -> True [149572 gas]
+│   └── XDEFI.balanceOf(account=0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5) -> 1313544030383442674610343 [135118 gas]
+│       └── (delegate) FixedToken.balanceOf(account=0x77924185CF0cbB2Ae0b746A0086A065d6875b0a5) -> 1313544030383442674610343 [132875 gas]
+└── CALL: 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640.<0x128acb08>  [130650 gas]
+    ├── CALL: FiatTokenProxy.<0xa9059cbb>  [102998 gas]
+    │   └── (delegate) FiatTokenV2_1.transfer(to=tx.origin, value=4192051335) -> True [94297 gas]
+    ├── WETH.balanceOf(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640) -> 68357784800426962457000 [73171 gas]
+    ├── AggregationRouterV4.uniswapV3SwapCallback(
+    │     amount0Delta=-4192051335,
+    │     amount1Delta=2098831888913057968,
+    │     0x00..097d
+    │   ) [69917 gas]
+    │   ├── STATICCALL: 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640.<0x0dfe1681>  [68120 gas]
+    │   ├── STATICCALL: 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640.<0xd21220a7>  [67710 gas]
+    │   ├── STATICCALL: 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640.<0xddca3f43>  [67262 gas]
+    │   └── WETH.transfer(
+    │         dst=0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640,
+    │         wad=2098831888913057968
+    │       ) -> True [65595 gas]
+    └── WETH.balanceOf(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640) -> 68359883632315875514968 [59578 gas]
+"""
 MAINNET_TRACE = """
 Call trace for '0xb7d7f1d5ce7743e821d3026647df486f517946ef1342a1ae93c96e4a8016eab7'
 txn.origin=0x5668EAd1eDB8E2a4d724C8fb9cB5fFEabEB422dc

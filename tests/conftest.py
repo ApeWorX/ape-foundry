@@ -6,6 +6,7 @@ import pytest
 from _pytest.runner import pytest_runtest_makereport as orig_pytest_runtest_makereport
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer, ContractInstance
+from ape.logging import LogLevel, logger
 from ethpm_types import ContractType
 
 from ape_foundry import FoundryForkProvider, FoundryProvider
@@ -14,6 +15,7 @@ from ape_foundry import FoundryForkProvider, FoundryProvider
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
 
 BASE_CONTRACTS_PATH = Path(__file__).parent / "data" / "contracts"
+logger.set_level(LogLevel.DEBUG)
 
 
 def pytest_runtest_makereport(item, call):

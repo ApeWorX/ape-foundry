@@ -80,6 +80,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     port: Optional[int] = None
     attempted_ports: List[int] = []
     unlocked_accounts: List[AddressType] = []
+    cached_chain_id: Optional[int] = None
 
     @property
     def mnemonic(self) -> str:
@@ -99,8 +100,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def chain_id(self) -> int:
-        if hasattr(self.web3, "eth"):
-            return self.web3.eth.chain_id
+        if self.cached_chain_id is not None:
+            return self.cached_chain_id
+
+        elif self.cached_chain_id is None and hasattr(self.web3, "eth"):
+            self.cached_chain_id = self.web3.eth.chain_id
+            return self.cached_chain_id
+
         else:
             return FOUNDRY_CHAIN_ID
 
@@ -336,9 +342,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if required_confirmations < 0:
             raise TransactionError(message="Required confirmations cannot be negative.")
 
+        poll_latency = 0.3
         timeout = self.config_manager.transaction_acceptance_timeout
         receipt_data = self.web3.eth.wait_for_transaction_receipt(
-            HexBytes(txn_hash), timeout=timeout, poll_latency=0.3
+            HexBytes(txn_hash), timeout=timeout, poll_latency=poll_latency
         )
         txn = self.web3.eth.get_transaction(txn_hash)  # type: ignore
         receipt = self.network.ecosystem.decode_receipt(

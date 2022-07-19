@@ -5,12 +5,14 @@ from pathlib import Path
 
 import pytest
 from ape.exceptions import ContractLogicError
+from ape.logging import LogLevel, logger
 from ape.types import AddressType
 from ape_ethereum.ecosystem import NETWORKS
 from eth_typing import HexAddress, HexStr
 
 TESTS_DIRECTORY = Path(__file__).parent
 TEST_ADDRESS = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+logger.set_level(LogLevel.DEBUG)
 
 
 @pytest.fixture(scope="module")

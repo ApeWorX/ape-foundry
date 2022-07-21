@@ -1,0 +1,19 @@
+foundry:
+
+  port: auto
+
+  request_timeout: 29
+  fork_request_timeout: 360
+
+  fork:
+    ethereum:
+      mainnet:
+        upstream_provider: alchemy
+      rinkeby:
+        upstream_provider: alchemy
+      kovan:
+        upstream_provider: alchemy
+      ropsten:
+        upstream_provider: alchemy
+      goerli:
+        upstream_provider: alchemy

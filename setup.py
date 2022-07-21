@@ -10,6 +10,7 @@ extras_require = {
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
+        "ape-alchemy",  # For running fork tests
     ],
     "lint": [
         "black>=22.3.0,<23.0",  # auto-formatter and linter
@@ -30,7 +31,7 @@ extras_require = {
         "twine",  # Package upload tool
     ],
     "dev": [
-        "commitizen>=2.24",  # Manage commits and publishing releases
+        "commitizen==2.19",  # Manage commits and publishing releases
         "pre-commit>=2.18",  # Ensure that linters are run prior to committing
         "IPython",  # Console for interacting
         "ipdb",  # Debugger (Must use `export PYTHONBREAKPOINT=ipdb.set_trace`)
@@ -66,10 +67,12 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.2.1,<0.3.0",
+        "eth-ape>=0.3.5,<0.4.0",
         "importlib-metadata ; python_version<'3.8'",
-        "evm-trace>=0.1.0.a1",
-    ],  # NOTE: Add 3rd party libraries here
+        "evm-trace>=0.1.0.a6",
+        "hexbytes",  # Use same as eth-ape
+        "web3",  # Use same as eth-ape
+    ],
     python_requires=">=3.7.2,<4",
     extras_require=extras_require,
     py_modules=["ape_foundry"],

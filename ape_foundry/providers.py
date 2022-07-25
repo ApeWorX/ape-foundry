@@ -25,7 +25,7 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType
+from ape.types import AddressType, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_utils import to_checksum_address
@@ -283,19 +283,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if result.get("result") != "0x0":
             raise ProviderError(f"Failed to mine.\n{result}")
 
-    # def snapshot(self) -> str:
-    #     result = self._make_request("evm_snapshot", [])
-    #     if "result" not in result:
-    #         raise ProviderError(f"Failed to get snapshot ID.\n{result}")
-    #
-    #     return result["result"]
+    def snapshot(self) -> str:
+        result = self._make_request("evm_snapshot", [])
+        if "result" not in result:
+            raise ProviderError(f"Failed to get snapshot ID.\n{result}")
 
-    # def revert(self, snapshot_id: SnapshotID) -> bool:
-    #     if isinstance(snapshot_id, int):
-    #         snapshot_id = HexBytes(snapshot_id).hex()
-    #
-    #     result = self._make_request("evm_revert", [snapshot_id])
-    #     return result.get("result") is True
+        return result["result"]
+
+    def revert(self, snapshot_id: SnapshotID) -> bool:
+        if isinstance(snapshot_id, int):
+            snapshot_id = HexBytes(snapshot_id).hex()
+
+        result = self._make_request("evm_revert", [snapshot_id])
+        return result.get("result") is True
 
     def unlock_account(self, address: AddressType) -> bool:
         self._make_request("anvil_impersonateAccount", [address])
@@ -370,8 +370,17 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return int(result, 16) if isinstance(result, str) else result
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
-        raw_trace_list = self._make_request("trace_transaction", [txn_hash]).get("result", [])
+        response = self._make_request("trace_transaction", [txn_hash])
+
+        if "error" in response:
+            raise ProviderError(response["error"].get("message", "Failed to get call tree."))
+
+        raw_trace_list = response.get("result", [])
         trace_list = ParityTraceList.parse_obj(raw_trace_list)
+
+        if not trace_list:
+            raise ProviderError(f"No trace found for transaction '{txn_hash}'")
+
         return get_calltree_from_parity_trace(trace_list)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:

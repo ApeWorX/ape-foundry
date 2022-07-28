@@ -68,7 +68,9 @@ jobs:
           run: pip install .[test]
 
         - name: Run Tests
-          run: pytest -m "not fork and not manual and not fuzzing"
+          run: pytest -n auto -m "not fork and not manual and not fuzzing"
+          env:
+            RUST_BACKTRACE: full
 
 # Skipping fork tests due to bugs https://github.com/foundry-rs/foundry/issues/2036
 # and https://github.com/foundry-rs/foundry/issues/2387

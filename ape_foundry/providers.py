@@ -171,6 +171,20 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if not self._web3:
                     # Process attempts to get started at this point.
                     self._start()
+
+                    wait_for_key = "Listening on"
+                    timeout = 10
+                    iterations = 0
+                    while iterations < timeout:
+                        logged_lines = [x for x in self.stdout_logs_path.read_text().split("\n")]
+                        for line in logged_lines:
+                            if line.startswith(wait_for_key):
+                                return
+
+                        iterations += 1
+                        if iterations == timeout:
+                            raise ProviderError("Timed-out waiting for process to begin listening.")
+
                 else:
                     # The user configured a port and the anvil process was already running.
                     logger.info(

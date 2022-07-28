@@ -336,14 +336,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         receipt.raise_for_status()
         return receipt
 
-    def get_transaction(self, txn_hash: str, required_confirmations: int = 0) -> ReceiptAPI:
+    def get_transaction(
+        self, txn_hash: str, required_confirmations: int = 0, timeout: Optional[int] = None
+    ) -> ReceiptAPI:
         # NOTE: Method is custom because it uses a higher poll_latency than what is in code Ape
         # TODO: Add provider setting `txn_acceptance_check_poll_latency: float` in core ape.
         if required_confirmations < 0:
             raise TransactionError(message="Required confirmations cannot be negative.")
 
         poll_latency = 0.3
-        timeout = self.config_manager.transaction_acceptance_timeout
+        timeout = timeout if timeout is not None else self.network.transaction_acceptance_timeout
         receipt_data = self.web3.eth.wait_for_transaction_receipt(
             HexBytes(txn_hash), timeout=timeout, poll_latency=poll_latency
         )

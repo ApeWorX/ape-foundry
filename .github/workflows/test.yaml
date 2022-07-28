@@ -72,11 +72,14 @@ jobs:
           env:
             RUST_BACKTRACE: full
 
-        - name: Run Fork Tests
-          run: |
-            pytest -m fork
-          env:
-            WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}
+# Skipping fork tests due to bugs https://github.com/foundry-rs/foundry/issues/2036
+# and https://github.com/foundry-rs/foundry/issues/2387
+
+#        - name: Run Fork Tests
+#          run: |
+#            pytest -m fork
+#          env:
+#            WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}
 
 # NOTE: uncomment this block after you've marked tests with @pytest.mark.fuzzing
 #    fuzzing:

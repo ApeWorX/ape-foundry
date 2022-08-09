@@ -316,6 +316,25 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.unlocked_accounts.append(address)
         return True
 
+    def estimate_gas_cost(self, txn: TransactionAPI, **kwargs: Any) -> int:
+        """
+        Generates and returns an estimate of how much gas is necessary
+        to allow the transaction to complete.
+        The transaction will not be added to the blockchain.
+        """
+        try:
+            return super().estimate_gas_cost(txn, **kwargs)
+        except ValueError as err:
+            tx_error = _get_vm_error(err)
+
+            # If this is the cause of a would-be revert,
+            # raise ContractLogicError so that we can confirm tx-reverts.
+            if isinstance(tx_error, ContractLogicError):
+                raise tx_error from err
+
+            message = gas_estimation_error_message(tx_error)
+            raise TransactionError(base_err=tx_error, message=message) from err
+
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation

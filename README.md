@@ -1,6 +1,6 @@
 # ape-foundry
 
-Foundry network provider plugin for Ape. Foundry is a development framework written in Node.js for Ethereum that includes a local network implementation.
+Foundry network provider plugin for Ape. Foundry is a development framework written in Rust for Ethereum that includes a local network implementation.
 
 ## Dependencies
 

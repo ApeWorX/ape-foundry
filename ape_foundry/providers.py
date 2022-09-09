@@ -2,9 +2,8 @@ import random
 import shutil
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union, cast
 
-from ape._compat import Literal
 from ape.api import (
     PluginConfig,
     ProviderAPI,
@@ -293,7 +292,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             except ValueError as err:
                 raise _get_vm_error(err) from err
 
-            receipt = self.get_transaction(
+            receipt = self.get_receipt(
                 txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
             )
 

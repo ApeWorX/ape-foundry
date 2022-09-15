@@ -1,4 +1,4 @@
-# ape-foundry
+# Quick Start
 
 Foundry network provider plugin for Ape. Foundry is a development framework written in Rust for Ethereum that includes a local network implementation.
 
@@ -85,12 +85,3 @@ If the block number is specified, but no EVM version is specified, it is automat
 ```bash
 ape plugins install alchemy
 ```
-
-## Development
-
-Please see the [contributing guide](CONTRIBUTING.md) to learn more how to contribute to this project.
-Comments, questions, criticisms and pull requests are welcomed.
-
-## License
-
-This project is licensed under the [Apache 2.0](LICENSE).

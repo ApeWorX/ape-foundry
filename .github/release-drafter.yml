@@ -31,7 +31,7 @@ version-resolver:
 
 template: |
   ## Changes
-  
+
   $CHANGES
-  
+
   Special thanks to: $CONTRIBUTORS

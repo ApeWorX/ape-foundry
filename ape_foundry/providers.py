@@ -1,11 +1,12 @@
 import random
 import shutil
+from bisect import bisect_right
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union, cast
 
-from ape._compat import Literal
 from ape.api import (
+    BlockAPI,
     PluginConfig,
     ProviderAPI,
     ReceiptAPI,
@@ -24,12 +25,18 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, SnapshotID
-from ape.utils import cached_property, gas_estimation_error_message
+from ape.types import AddressType, BlockID, SnapshotID
+from ape.utils import cached_property
 from ape_test import Config as TestConfig
+from eth_utils import to_checksum_address
+from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
+from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
+from web3.types import RPCEndpoint
+
+from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
 
@@ -44,6 +51,7 @@ FOUNDRY_CHAIN_ID = 31337
 class FoundryForkConfig(PluginConfig):
     upstream_provider: Optional[str] = None
     block_number: Optional[int] = None
+    evm_version: Optional[str] = None
 
 
 class FoundryNetworkConfig(PluginConfig):
@@ -52,9 +60,11 @@ class FoundryNetworkConfig(PluginConfig):
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
     network_retries: List[float] = FOUNDRY_START_NETWORK_RETRIES
     process_attempts: int = FOUNDRY_START_PROCESS_ATTEMPTS
+    request_timeout: int = 30
+    fork_request_timeout: int = 300
 
     # For setting the values in --fork and --fork-block-number command arguments.
-    # Used only in FoundryMainnetForkProvider.
+    # Used only in FoundryForkProvider.
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
     fork: Dict[str, Dict[str, FoundryForkConfig]] = {}
 
@@ -70,6 +80,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     port: Optional[int] = None
     attempted_ports: List[int] = []
     unlocked_accounts: List[AddressType] = []
+    cached_chain_id: Optional[int] = None
 
     @property
     def mnemonic(self) -> str:
@@ -84,9 +95,18 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return "anvil"
 
     @property
+    def timeout(self) -> int:
+        return self.config.request_timeout  # type: ignore
+
+    @property
     def chain_id(self) -> int:
-        if hasattr(self._web3, "eth"):
-            return self._web3.eth.chain_id  # type: ignore
+        if self.cached_chain_id is not None:
+            return self.cached_chain_id
+
+        elif self.cached_chain_id is None and hasattr(self.web3, "eth"):
+            self.cached_chain_id = self.web3.eth.chain_id
+            return self.cached_chain_id
+
         else:
             return FOUNDRY_CHAIN_ID
 
@@ -116,13 +136,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def priority_fee(self) -> int:
-        """
-        Priority fee not needed in development network.
-        """
-        return 0
+        return self.conversion_manager.convert("2 gwei", int)
 
     @property
     def is_connected(self) -> bool:
+        if self._web3 is not None and self._web3.isConnected():
+            return True
+
         self._set_web3()
         return self._web3 is not None
 
@@ -149,7 +169,22 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             if self.port:
                 self._set_web3()
                 if not self._web3:
+                    # Process attempts to get started at this point.
                     self._start()
+
+                    wait_for_key = "Listening on"
+                    timeout = 10
+                    iterations = 0
+                    while iterations < timeout:
+                        logged_lines = [x for x in self.stdout_logs_path.read_text().split("\n")]
+                        for line in logged_lines:
+                            if line.startswith(wait_for_key):
+                                return
+
+                        iterations += 1
+                        if iterations == timeout:
+                            raise ProviderError("Timed-out waiting for process to begin listening.")
+
                 else:
                     # The user configured a port and the anvil process was already running.
                     logger.info(
@@ -172,9 +207,20 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not self.port:
             return
 
-        self._web3 = Web3(HTTPProvider(self.uri))
+        self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
         if not self._web3.isConnected():
             self._web3 = None
+            return
+
+        try:
+            self._web3.eth.get_block_number()
+        except Exception:
+            # Not yet ready
+            self._web3 = None
+            return
+
+        if not self.process:
+            # Connected to already-running process.
             return
 
         # Verify is actually a Foundry provider,
@@ -231,79 +277,166 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
         ]
 
-    def _make_request(self, rpc: str, args: list) -> Any:
-        return self._web3.manager.request_blocking(rpc, args)  # type: ignore
+    def set_balance(self, account: AddressType, balance: int):
+        if hasattr(account, "address"):
+            account = account.address  # type: ignore
+
+        if isinstance(balance, int):
+            # Anvil expects str int for balance
+            balance_value = HexBytes(balance).hex()
+        else:
+            balance_value = str(balance)
+
+        self._make_request("anvil_setBalance", [account, balance_value])
 
     def set_timestamp(self, new_timestamp: int):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
-        self._make_request("evm_mine", [{"blocks": num_blocks}])
+        result = self._make_request("evm_mine", [{"blocks": num_blocks}])
+        if result.get("result") != "0x0":
+            raise ProviderError(f"Failed to mine.\n{result}")
 
     def snapshot(self) -> str:
         result = self._make_request("evm_snapshot", [])
-        return str(result)
+        if "result" not in result:
+            raise ProviderError(f"Failed to get snapshot ID.\n{result}")
 
-    def revert(self, snapshot_id: SnapshotID):
-        if isinstance(snapshot_id, str) and snapshot_id.isnumeric():
-            snapshot_id = int(snapshot_id)  # type: ignore
+        return result["result"]
 
-        return self._make_request("evm_revert", [snapshot_id])
+    def revert(self, snapshot_id: SnapshotID) -> bool:
+        if isinstance(snapshot_id, int):
+            snapshot_id = HexBytes(snapshot_id).hex()
+
+        result = self._make_request("evm_revert", [snapshot_id])
+        return result.get("result") is True
 
     def unlock_account(self, address: AddressType) -> bool:
         self._make_request("anvil_impersonateAccount", [address])
         self.unlocked_accounts.append(address)
         return True
 
-    def estimate_gas_cost(self, txn: TransactionAPI, **kwargs: Any) -> int:
-        """
-        Generates and returns an estimate of how much gas is necessary
-        to allow the transaction to complete.
-        The transaction will not be added to the blockchain.
-        """
-        try:
-            return super().estimate_gas_cost(txn, **kwargs)
-        except ValueError as err:
-            tx_error = _get_vm_error(err)
-
-            # If this is the cause of a would-be revert,
-            # raise ContractLogicError so that we can confirm tx-reverts.
-            if isinstance(tx_error, ContractLogicError):
-                raise tx_error from err
-
-            message = gas_estimation_error_message(tx_error)
-            raise TransactionError(base_err=tx_error, message=message) from err
-
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation
         for signed transactions.
         """
-
         sender = txn.sender
         if sender:
             sender = self.conversion_manager.convert(txn.sender, AddressType)
 
-        if sender in self.unlocked_accounts:
+        if sender and sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
-            txn_dict = txn.dict()
+
+            sender = to_checksum_address(sender)  # For mypy
+            txn = self.prepare_transaction(txn)
+            original_code = self.get_code(sender)
+            if original_code:
+                self.set_code(sender, "")
 
             try:
-                txn_hash = self._web3.eth.send_transaction(txn_dict)  # type: ignore
+                txn_hash = self.web3.eth.send_transaction(txn.dict())  # type: ignore
+                receipt = self.get_transaction(
+                    txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
+                )
             except ValueError as err:
-                raise _get_vm_error(err) from err
-
-            receipt = self.get_transaction(
-                txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
-            )
-
-        try:
+                raise self.get_virtual_machine_error(err) from err
+            finally:
+                if original_code:
+                    self.set_code(sender, original_code.hex())
+        else:
             receipt = super().send_transaction(txn)
-        except ValueError as err:
-            raise _get_vm_error(err) from err
 
         receipt.raise_for_status()
         return receipt
+
+    def get_transaction(
+        self, txn_hash: str, required_confirmations: int = 0, timeout: Optional[int] = None
+    ) -> ReceiptAPI:
+        # NOTE: Method is custom because it uses a higher poll_latency than what is in code Ape
+        # TODO: Add provider setting `txn_acceptance_check_poll_latency: float` in core ape.
+        if required_confirmations < 0:
+            raise TransactionError(message="Required confirmations cannot be negative.")
+
+        poll_latency = 0.3
+        timeout = timeout if timeout is not None else self.network.transaction_acceptance_timeout
+        receipt_data = self.web3.eth.wait_for_transaction_receipt(
+            HexBytes(txn_hash), timeout=timeout, poll_latency=poll_latency
+        )
+        txn = self.web3.eth.get_transaction(txn_hash)  # type: ignore
+        receipt = self.network.ecosystem.decode_receipt(
+            {
+                "provider": self,
+                "required_confirmations": required_confirmations,
+                **txn,
+                **receipt_data,
+            }
+        )
+        return receipt.await_confirmations()
+
+    def get_balance(self, address: str) -> int:
+        # NOTE: Original `web3.eth.get_balance` fails when using Anvil.
+        if hasattr(address, "address"):
+            address = address.address  # type: ignore
+
+        result = self._make_request("eth_getBalance", [address, "latest"]).get("result")
+        if not result:
+            raise ProviderError(f"Failed to get balance for account '{address}'.")
+
+        return int(result, 16) if isinstance(result, str) else result
+
+    def get_call_tree(self, txn_hash: str) -> CallTreeNode:
+        response = self._make_request("trace_transaction", [txn_hash])
+
+        if "error" in response:
+            raise ProviderError(response["error"].get("message", "Failed to get call tree."))
+
+        raw_trace_list = response.get("result", [])
+        trace_list = ParityTraceList.parse_obj(raw_trace_list)
+
+        if not trace_list:
+            raise ProviderError(f"No trace found for transaction '{txn_hash}'")
+
+        return get_calltree_from_parity_trace(trace_list)
+
+    def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
+        if not len(exception.args):
+            return VirtualMachineError(base_err=exception)
+
+        err_data = exception.args[0]
+        message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
+
+        if not message:
+            return VirtualMachineError(base_err=exception)
+
+        # Handle `ContactLogicError` similarly to other providers in `ape`.
+        # by stripping off the unnecessary prefix that foundry has on reverts.
+        foundry_prefix = (
+            "Error: VM Exception while processing transaction: reverted with reason string "
+        )
+        if message.startswith(foundry_prefix):
+            message = message.replace(foundry_prefix, "").strip("'")
+            return ContractLogicError(revert_message=message)
+
+        elif (
+            "Transaction reverted without a reason string" in message
+            or message.lower() == "execution reverted"
+        ):
+            return ContractLogicError()
+
+        elif message == "Transaction ran out of gas":
+            return OutOfGasError()  # type: ignore
+
+        elif message.startswith("execution reverted: "):
+            raise ContractLogicError(message.replace("execution reverted: ", "").strip())
+
+        return VirtualMachineError(message=message)
+
+    def set_code(self, address: AddressType, code: str):
+        self._make_request("anvil_setCode", [address, code])
+
+    def _make_request(self, rpc: str, args: list) -> Any:
+        return self.web3.provider.make_request(RPCEndpoint(rpc), args)
 
 
 class FoundryForkProvider(FoundryProvider):
@@ -317,21 +450,51 @@ class FoundryForkProvider(FoundryProvider):
     """
 
     @property
+    def fork_url(self) -> str:
+        return self._upstream_provider.connection_str  # type: ignore
+
+    @property
+    def fork_block_number(self) -> Optional[int]:
+        return self._fork_config.block_number
+
+    def get_block(self, block_id: BlockID) -> BlockAPI:
+        if isinstance(block_id, str) and block_id.isnumeric():
+            block_id = int(block_id)
+
+        block_data = dict(self.web3.eth.get_block(block_id))
+
+        # Fix Foundry-specific differences
+        if "baseFeePerGas" in block_data and block_data.get("baseFeePerGas") is None:
+            block_data["baseFeePerGas"] = 0
+
+        return self.network.ecosystem.decode_block(block_data)
+
+    def detect_evm_version(self) -> Optional[str]:
+        if self.fork_block_number is None:
+            return None
+
+        ecosystem = self._upstream_provider.network.ecosystem.name
+        network = self._upstream_provider.network.name
+        try:
+            hardforks = EVM_VERSION_BY_NETWORK[ecosystem][network]
+        except KeyError:
+            return None
+
+        keys = sorted(hardforks)
+        index = bisect_right(keys, self.fork_block_number) - 1
+        return hardforks[keys[index]]
+
+    @property
+    def timeout(self) -> int:
+        return self.config.fork_request_timeout  # type: ignore
+
+    @property
     def _upstream_network_name(self) -> str:
         return self.network.name.replace("-fork", "")
 
     @cached_property
     def _fork_config(self) -> FoundryForkConfig:
         config = cast(FoundryNetworkConfig, self.config)
-
-        # NOTE: Only for backwards compatibility
-        if "mainnet_fork" in config.dict():
-            logger.warning(
-                "Use of key `mainnet_fork` in `foundry` config is deprecated. "
-                "Please use the `fork` key, with `ecosystem` and `network` subkeys."
-            )
-            return FoundryForkConfig.parse_obj(config.dict().get("mainnet_fork"))
-
         ecosystem_name = self.network.ecosystem.name
         if ecosystem_name not in config.fork:
             return FoundryForkConfig()  # Just use default
@@ -346,13 +509,13 @@ class FoundryForkProvider(FoundryProvider):
     def _upstream_provider(self) -> ProviderAPI:
         upstream_network = self.network.ecosystem.networks[self._upstream_network_name]
         upstream_provider_name = self._fork_config.upstream_provider
-        # NOTE: if 'upstream_provider_name' is 'None', this gets the default mainnet provider.
+        # NOTE: if 'upstream_provider_name' is 'None', this gets the default upstream provider.
         return upstream_network.get_provider(provider_name=upstream_provider_name)
 
     def connect(self):
         super().connect()
 
-        # Verify that we're connected to a Foundry node with mainnet-fork mode.
+        # Verify that we're connected to a Foundry node with fork mode.
         self._upstream_provider.connect()
         upstream_chain_id = self._upstream_provider.chain_id
         upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash
@@ -374,48 +537,28 @@ class FoundryForkProvider(FoundryProvider):
                 f"Provider '{self._upstream_provider.name}' is not an upstream provider."
             )
 
-        fork_url = self._upstream_provider.connection_str  # type: ignore
-        if not fork_url:
+        if not self.fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 
-        if fork_url.replace("localhost", "127.0.0.1") == self.uri:
+        if self.fork_url.replace("localhost", "127.0.0.1") == self.uri:
             raise FoundryProviderError(
                 "Invalid upstream-fork URL. Can't be same as local anvil node."
             )
 
         cmd = super().build_command()
-        cmd.extend(("--fork-url", fork_url))
-        fork_block_number = self._fork_config.block_number
-        if fork_block_number is not None:
-            cmd.extend(("--fork-block-number", str(fork_block_number)))
+        cmd.extend(("--fork-url", self.fork_url))
+        if self.fork_block_number is not None:
+            cmd.extend(("--fork-block-number", str(self.fork_block_number)))
+
+            if self._fork_config.evm_version is None:
+                self._fork_config.evm_version = self.detect_evm_version()
+
+        if self._fork_config.evm_version is not None:
+            cmd.extend(("--hardfork", self._fork_config.evm_version))
 
         return cmd
 
-
-def _get_vm_error(web3_value_error: ValueError) -> TransactionError:
-    if not len(web3_value_error.args):
-        return VirtualMachineError(base_err=web3_value_error)
-
-    err_data = web3_value_error.args[0]
-    if not isinstance(err_data, dict):
-        return VirtualMachineError(base_err=web3_value_error)
-
-    message = str(err_data.get("message"))
-    if not message:
-        return VirtualMachineError(base_err=web3_value_error)
-
-    # Handle `ContactLogicError` similarly to other providers in `ape`.
-    # by stripping off the unnecessary prefix that foundry has on reverts.
-    foundry_prefix = (
-        "Error: VM Exception while processing transaction: reverted with reason string "
-    )
-    if message.startswith(foundry_prefix):
-        message = message.replace(foundry_prefix, "").strip("'")
-        return ContractLogicError(revert_message=message)
-    elif "Transaction reverted without a reason string" in message:
-        return ContractLogicError()
-
-    elif message == "Transaction ran out of gas":
-        return OutOfGasError()
-
-    return VirtualMachineError(message=message)
+    def reset_fork(self):
+        self._make_request(
+            "anvil_reset", [{"jsonRpcUrl": self.fork_url, "blockNumber": self.fork_block_number}]
+        )

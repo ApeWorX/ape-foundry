@@ -69,12 +69,18 @@ jobs:
               python-version: ${{ matrix.python-version }}
 
         - name: Install Dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip install .[test]
+          run: pip install .[test]
 
         - name: Run Tests
-          run: pytest -m "not fuzzing" -n 0 -s --cov
+          run: pytest -m "not fork and not manual and not fuzzing"
+          env:
+            RUST_BACKTRACE: full
+
+        - name: Run Fork Tests
+          run: |
+            pytest -m fork
+          env:
+            WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}
 
 # NOTE: uncomment this block after you've marked tests with @pytest.mark.fuzzing
 #    fuzzing:

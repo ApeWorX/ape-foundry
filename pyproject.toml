@@ -19,7 +19,6 @@ include = '\.pyi?$'
 
 [tool.pytest.ini_options]
 addopts = """
-    -n auto
     -p no:ape_test
     --cov-branch
     --cov-report term
@@ -29,7 +28,11 @@ addopts = """
 """
 python_files = "test_*.py"
 testpaths = "tests"
-markers = "fuzzing: Run Hypothesis fuzz test suite"
+markers = """
+fuzzing: Run Hypothesis fuzz test suite
+fork: Run forked-network tests using Alchemy as the upstream provider
+manual: Tests you want to avoid running in automated CI/CD because of expense
+"""
 
 [tool.isort]
 line_length = 100

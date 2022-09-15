@@ -10,12 +10,13 @@ extras_require = {
         "pytest-xdist",  # multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
+        "ape-alchemy",  # For running fork tests
     ],
     "lint": [
-        "black>=22.6.0,<23.0",  # auto-formatter and linter
-        "mypy>=0.971,<1.0",  # Static type analyzer
-        "flake8>=4.0.1,<5.0",  # Style linter
-        "isort>=5.10.1,<6.0",  # Import sorting linter
+        "black>=22.6.0",  # auto-formatter and linter
+        "mypy>=0.971",  # Static type analyzer
+        "flake8>=4.0.1",  # Style linter
+        "isort>=5.10.1",  # Import sorting linter
         "types-requests",  # NOTE: Needed due to mypy typeshed
     ],
     "doc": [
@@ -30,7 +31,7 @@ extras_require = {
         "twine",  # Package upload tool
     ],
     "dev": [
-        "commitizen>",  # Manage commits and publishing releases
+        "commitizen>=2.19,<2.20",  # Manage commits and publishing releases
         "pre-commit",  # Ensure that linters are run prior to committing
         "IPython",  # Console for interacting
         "ipdb",  # Debugger (Must use `export PYTHONBREAKPOINT=ipdb.set_trace`)
@@ -66,10 +67,12 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.5.0,<0.6",
-        "evm-trace==0.1.0.a7",
+        "eth-ape>=0.5.1,<0.6",
+        "evm-trace",  # Use same version as eth-ape
+        "hexbytes",  # Use same version as eth-ape
+        "web3",  # Use same version as eth-ape
     ],
-    python_requires=">=3.8,<4",
+    python_requires=">=3.8,<3.11",
     extras_require=extras_require,
     py_modules=["ape_foundry"],
     license="Apache-2.0",

@@ -315,7 +315,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.unlocked_accounts.append(address)
         return True
 
-    def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
+    def send_transaction(self, txn: TransactionAPI, raise_on_fail: bool = True) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation
         for signed transactions.
@@ -344,9 +344,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if original_code:
                     self.set_code(sender, original_code.hex())
         else:
-            receipt = super().send_transaction(txn)
+            receipt = super().send_transaction(txn, raise_on_fail=raise_on_fail)
 
-        receipt.raise_for_status()
+        if raise_on_fail:
+            receipt.raise_for_status()
+
         return receipt
 
     def get_balance(self, address: str) -> int:

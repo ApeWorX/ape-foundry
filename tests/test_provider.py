@@ -191,6 +191,13 @@ def test_contract_revert_no_message(owner, contract_instance):
     assert str(err.value) == "Transaction failed."
 
 
+def test_contract_revert_no_raise(owner, contract_instance):
+    # The Contract raises empty revert when setting number to 5.
+    receipt = contract_instance.setNumber(5, sender=owner)
+
+    assert receipt.failed
+
+
 def test_get_call_tree(receipt, connected_provider, call_expression):
     actual = connected_provider.get_call_tree(receipt.txn_hash)
     assert call_expression.match(repr(actual))

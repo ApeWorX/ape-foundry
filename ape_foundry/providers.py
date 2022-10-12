@@ -139,7 +139,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def is_connected(self) -> bool:
-        if self._web3 is not None and self._web3.isConnected():
+        if self._web3 is not None and self._web3.is_connected():
             return True
 
         self._set_web3()
@@ -207,7 +207,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
-        if not self._web3.isConnected():
+        if not self._web3.is_connected():
             self._web3 = None
             return
 

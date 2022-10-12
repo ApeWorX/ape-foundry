@@ -32,7 +32,6 @@ from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_tr
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
-from web3.middleware import geth_poa_middleware
 from web3.types import RPCEndpoint
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
@@ -492,13 +491,8 @@ class FoundryForkProvider(FoundryProvider):
 
         # Verify that we're connected to a Foundry node with fork mode.
         self._upstream_provider.connect()
-        upstream_chain_id = self._upstream_provider.chain_id
         upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash
         self._upstream_provider.disconnect()
-
-        # If upstream network is rinkeby, goerli, or kovan (PoA test-nets)
-        if upstream_chain_id in (4, 5, 42):
-            self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(

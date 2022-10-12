@@ -9,11 +9,6 @@ foundry:
     ethereum:
       mainnet:
         upstream_provider: alchemy
-      rinkeby:
-        upstream_provider: alchemy
-      kovan:
-        upstream_provider: alchemy
-      ropsten:
-        upstream_provider: alchemy
       goerli:
         upstream_provider: alchemy
+        block_number: 7757695

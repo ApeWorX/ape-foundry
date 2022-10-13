@@ -50,7 +50,7 @@ def test_fork_config(config, network):
 
 
 @pytest.mark.fork
-@pytest.mark.parametrize("upstream,port", [("mainnet", 8998), ("rinkeby", 8999)])
+@pytest.mark.parametrize("upstream,port", [("mainnet", 8998), ("goerli", 8999)])
 def test_impersonate(connect_to, convert, accounts, upstream, port):
     with connect_to(port, upstream) as provider:
         impersonated_account = accounts[TEST_ADDRESS]

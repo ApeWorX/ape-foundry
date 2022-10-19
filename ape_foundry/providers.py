@@ -31,7 +31,10 @@ from eth_utils import to_checksum_address
 from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
+from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
+from web3.middleware import geth_poa_middleware
+from web3.middleware.validation import MAX_EXTRADATA_LENGTH
 from web3.types import RPCEndpoint
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
@@ -206,6 +209,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
+
         if not self._web3.is_connected():
             self._web3 = None
             return
@@ -231,6 +235,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             raise ProviderError(
                 f"Port '{self.port}' already in use by another process that isn't a Foundry node."
             )
+
+        try:
+            block = self.web3.eth.get_block("latest")
+        except ExtraDataLengthError:
+            is_likely_poa = True
+        else:
+            is_likely_poa = (
+                "proofOfAuthorityData" in block
+                or len(block.get("extraData", "")) > MAX_EXTRADATA_LENGTH
+            )
+
+        if is_likely_poa:
+            self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):
         use_random_port = self.port == "auto"

@@ -524,22 +524,21 @@ class FoundryForkProvider(FoundryProvider):
         super().connect()
 
         # Verify that we're connected to a Foundry node with fork mode.
-        self._upstream_provider.connect()
+        upstream_provider = self._upstream_provider
+        upstream_provider.connect()
         try:
-            upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash
+            upstream_genesis_block_hash = upstream_provider.get_block(0).hash
         except ExtraDataLengthError as err:
-            upstream_provider = self._upstream_provider
             if isinstance(upstream_provider, Web3Provider):
                 logger.error(
-                    f"Upstream provider '{self._upstream_provider.name}' "
-                    f"missing Geth PoA middleware."
+                    f"Upstream provider '{upstream_provider.name}' " f"missing Geth PoA middleware."
                 )
                 upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-                upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash
+                upstream_genesis_block_hash = upstream_provider.get_block(0).hash
             else:
                 raise ProviderError(f"Unable to get genesis block: {err}.") from err
 
-        self._upstream_provider.disconnect()
+        upstream_provider.disconnect()
 
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(

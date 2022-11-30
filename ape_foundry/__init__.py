@@ -7,7 +7,7 @@ from ape import plugins
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape_ethereum.ecosystem import NETWORKS
 
-from .providers import (
+from .provider import (
     FoundryForkProvider,
     FoundryNetworkConfig,
     FoundryProvider,

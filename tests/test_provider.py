@@ -5,10 +5,11 @@ from pathlib import Path
 
 import pytest
 from ape.exceptions import ContractLogicError, SignatureError
+from evm_trace import CallTreeNode, CallType
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
-from ape_foundry.providers import FOUNDRY_CHAIN_ID, FoundryProvider
+from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryProvider
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -108,6 +109,11 @@ def test_multiple_instances(create_provider):
     assert hash_1 != hash_2 != hash_3
 
 
+def test_set_block_gas_limit(connected_provider):
+    gas_limit = connected_provider.get_block("latest").gas_limit
+    assert connected_provider.set_block_gas_limit(gas_limit) is True
+
+
 def test_set_timestamp(connected_provider):
     start_time = connected_provider.get_block("pending").timestamp
     connected_provider.set_timestamp(start_time + 5)  # Increase by 5 seconds
@@ -153,8 +159,16 @@ def test_unlock_account(connected_provider):
     assert TEST_WALLET_ADDRESS in connected_provider.unlocked_accounts
 
 
+def test_get_call_tree(connected_provider, sender, receiver):
+    transfer = sender.transfer(receiver, 1)
+    call_tree = connected_provider.get_call_tree(transfer.txn_hash)
+    assert isinstance(call_tree, CallTreeNode)
+    assert call_tree.call_type == CallType.CALL
+    assert repr(call_tree) == "CALL: 0xc89D42189f0450C2b2c3c61f58Ec5d628176A1E7 [21000 gas]"
+
+
 def test_request_timeout(connected_provider, config, create_provider):
-    actual = connected_provider.web3.provider._request_kwargs["timeout"]  # type: ignore
+    actual = connected_provider.web3.provider._request_kwargs["timeout"]
     expected = 29  # Value set in `ape-config.yaml`
     assert actual == expected
 
@@ -191,6 +205,40 @@ def test_contract_revert_no_message(owner, contract_instance):
     assert str(err.value) == "Transaction failed."
 
 
-def test_get_call_tree(receipt, connected_provider, call_expression):
-    actual = connected_provider.get_call_tree(receipt.txn_hash)
-    assert call_expression.match(repr(actual))
+def test_transaction_contract_as_sender(contract_instance, connected_provider):
+    # Set balance so test wouldn't normally fail from lack of funds
+    connected_provider.set_balance(contract_instance.address, "1000 ETH")
+    receipt = contract_instance.setNumber(10, sender=contract_instance)
+    assert receipt
+
+
+@pytest.mark.parametrize(
+    "amount", ("50 ETH", int(50e18), "0x2b5e3af16b1880000", "50000000000000000000")
+)
+def test_set_balance(connected_provider, owner, convert, amount):
+    connected_provider.set_balance(owner.address, amount)
+    assert owner.balance == convert("50 ETH", int)
+
+
+def test_set_code(connected_provider, contract_container, owner):
+    contract = contract_container.deploy(sender=owner)
+    provider = connected_provider
+    code = provider.get_code(contract.address)
+    assert type(code) == HexBytes
+    assert provider.set_code(contract.address, "0x00") is True
+    assert provider.get_code(contract.address) != code
+    assert provider.set_code(contract.address, code) is True
+    assert provider.get_code(contract.address) == code
+
+
+def test_return_value(connected_provider, contract_instance, owner):
+    receipt = contract_instance.setAddress(owner.address, sender=owner)
+    assert receipt.return_value == 123
+
+
+def test_get_receipt(connected_provider, contract_instance, owner):
+    receipt = contract_instance.setAddress(owner.address, sender=owner)
+    actual = connected_provider.get_receipt(receipt.txn_hash)
+    assert receipt.txn_hash == actual.txn_hash
+    assert actual.receiver == contract_instance.address
+    assert actual.sender == receipt.sender

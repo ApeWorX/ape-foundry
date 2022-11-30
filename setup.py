@@ -17,6 +17,7 @@ extras_require = {
         "mypy>=0.991",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
+        "types-PyYAML",  # Needed due to mypy typeshed
         "flake8>=5.0.4",  # Style linter
         "isort>=5.10.1",  # Import sorting linter
     ],
@@ -69,7 +70,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "eth-ape>=0.5.6,<0.6",
-        "evm-trace",  # Use same version as eth-ape
+        "evm-trace>=0.1.0a13",
         "hexbytes",  # Use same version as eth-ape
         "web3",  # Use same version as eth-ape
     ],

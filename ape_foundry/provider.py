@@ -27,7 +27,7 @@ from ape.logging import logger
 from ape.types import AddressType, BlockID, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
-from eth_utils import is_0x_prefixed, is_hex, to_checksum_address, to_hex
+from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
 from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
@@ -426,6 +426,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_code(self, address: AddressType, code: Union[str, bytes, HexBytes]) -> bool:
         if isinstance(code, bytes):
             code = code.hex()
+
+        elif isinstance(code, str) and not is_0x_prefixed(code):
+            code = add_0x_prefix(code)
 
         elif not is_hex(code):
             raise ValueError(f"Value {code} is not convertible to hex")

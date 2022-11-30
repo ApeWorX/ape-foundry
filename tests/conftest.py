@@ -11,6 +11,7 @@ import yaml
 from _pytest.runner import pytest_runtest_makereport as orig_pytest_runtest_makereport
 from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer
+from ape.exceptions import APINotImplementedError, UnknownSnapshotError
 from ape.managers.config import CONFIG_FILE_NAME
 from ethpm_types import ContractType
 
@@ -32,6 +33,44 @@ def pytest_runtest_makereport(item, call):
         tr.wasxfail = "reason: Alchemy requests overloaded (likely in CI)"
 
     return tr
+
+
+@contextmanager
+def _isolation():
+    if ape.networks.active_provider is None:
+        raise AssertionError("Isolation should only be used with a connected provider.")
+
+    init_network_name = ape.chain.provider.network.name
+    init_provider_name = ape.chain.provider.name
+
+    try:
+        snapshot = ape.chain.snapshot()
+    except APINotImplementedError:
+        # Provider not used or connected in test.
+        snapshot = None
+
+    yield
+
+    if (
+        snapshot is None
+        or ape.networks.active_provider is None
+        or ape.chain.provider.network.name != init_network_name
+        or ape.chain.provider.name != init_provider_name
+    ):
+        return
+
+    try:
+        ape.chain.restore(snapshot)
+    except UnknownSnapshotError:
+        # Assume snapshot removed for testing reasons
+        # or the provider was not needed to be connected for the test.
+        pass
+
+
+@pytest.fixture(autouse=True)
+def main_provider_isolation(connected_provider):
+    with _isolation():
+        yield
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -120,11 +159,9 @@ def local_network_api(networks):
     return networks.ecosystems["ethereum"][LOCAL_NETWORK_NAME]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def connected_provider(networks, local_network_api):
-    with networks.parse_network_choice(
-        "ethereum:local:foundry", provider_settings={"port": "auto"}
-    ) as provider:
+    with networks.parse_network_choice("ethereum:local:foundry") as provider:
         yield provider
 
 

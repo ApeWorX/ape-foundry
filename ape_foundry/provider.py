@@ -6,6 +6,8 @@ from pathlib import Path
 from subprocess import PIPE, call
 from typing import Dict, List, Literal, Optional, Union, cast
 
+from eth_typing import HexStr
+
 from ape.api import (
     BlockAPI,
     PluginConfig,
@@ -428,7 +430,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             code = code.hex()
 
         elif isinstance(code, str) and not is_0x_prefixed(code):
-            code = add_0x_prefix(code)
+            code = add_0x_prefix(HexStr(code))
 
         elif not is_hex(code):
             raise ValueError(f"Value {code} is not convertible to hex")

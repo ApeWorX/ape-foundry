@@ -6,8 +6,6 @@ from pathlib import Path
 from subprocess import PIPE, call
 from typing import Dict, List, Literal, Optional, Union, cast
 
-from eth_typing import HexStr
-
 from ape.api import (
     BlockAPI,
     PluginConfig,
@@ -29,6 +27,7 @@ from ape.logging import logger
 from ape.types import AddressType, BlockID, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
+from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
 from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes

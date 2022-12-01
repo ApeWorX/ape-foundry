@@ -385,7 +385,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not trace_list:
             raise ProviderError(f"No trace found for transaction '{txn_hash}'")
 
-        receipt = self.chain_manager.get_receipt(txn_hash)
         return get_calltree_from_parity_trace(trace_list)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:

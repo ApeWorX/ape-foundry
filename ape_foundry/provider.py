@@ -1,14 +1,14 @@
 import random
 import shutil
 from bisect import bisect_right
+from copy import copy
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Dict, List, Literal, Optional, Union, cast
 
 from ape.api import (
     BlockAPI,
     PluginConfig,
-    ProviderAPI,
     ReceiptAPI,
     SubprocessProvider,
     TestProviderAPI,
@@ -27,7 +27,8 @@ from ape.logging import logger
 from ape.types import AddressType, BlockID, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
-from eth_utils import to_checksum_address
+from eth_typing import HexStr
+from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
 from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
@@ -35,7 +36,7 @@ from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.middleware.validation import MAX_EXTRADATA_LENGTH
-from web3.types import RPCEndpoint
+from web3.types import TxParams
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
@@ -97,7 +98,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def timeout(self) -> int:
-        return self.config.request_timeout  # type: ignore
+        return self.config.request_timeout
 
     @property
     def chain_id(self) -> int:
@@ -158,7 +159,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         """
 
         if not self.port:
-            self.port = self.config.port  # type: ignore
+            self.port = self.provider_settings.get("port", self.config.port)
 
         if self.is_connected:
             # Connects to already running process
@@ -192,7 +193,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         f"Connecting to existing '{self.process_name}' at port '{self.port}'."
                     )
             else:
-                for _ in range(self.config.process_attempts):  # type: ignore
+                for _ in range(self.config.process_attempts):
                     try:
                         self._start()
                         break
@@ -209,7 +210,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
-
         if not self._web3.is_connected():
             self._web3 = None
             return
@@ -237,16 +237,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             )
 
         try:
-            block = self.web3.eth.get_block("latest")
+            block = self.web3.eth.get_block(0)
         except ExtraDataLengthError:
-            is_likely_poa = True
+            began_poa = True
         else:
-            is_likely_poa = (
+            began_poa = (
                 "proofOfAuthorityData" in block
                 or len(block.get("extraData", "")) > MAX_EXTRADATA_LENGTH
             )
 
-        if is_likely_poa:
+        if began_poa:
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):
@@ -292,39 +292,42 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
         ]
 
-    def set_balance(self, account: AddressType, balance: int):
-        if hasattr(account, "address"):
-            account = account.address  # type: ignore
+    def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
+        is_str = isinstance(amount, str)
+        _is_hex = False if not is_str else is_0x_prefixed(str(amount))
+        is_key_word = is_str and len(str(amount).split(" ")) > 1
+        if is_key_word:
+            # This allows values such as "1000 ETH".
+            amount = self.conversion_manager.convert(amount, int)
+            is_str = False
 
-        if isinstance(balance, int):
-            # Anvil expects str int for balance
-            balance_value = HexBytes(balance).hex()
-        else:
-            balance_value = str(balance)
+        amount_hex_str = str(amount)
 
-        self._make_request("anvil_setBalance", [account, balance_value])
+        # Convert to hex str
+        if is_str and not _is_hex:
+            amount_hex_str = to_hex(int(amount))
+        elif isinstance(amount, int) or isinstance(amount, bytes):
+            amount_hex_str = to_hex(amount)
+
+        self._make_request("anvil_setBalance", [account, amount_hex_str])
 
     def set_timestamp(self, new_timestamp: int):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
         result = self._make_request("evm_mine", [{"blocks": num_blocks}])
-        if result.get("result") != "0x0":
+        if result != "0x0":
             raise ProviderError(f"Failed to mine.\n{result}")
 
     def snapshot(self) -> str:
-        result = self._make_request("evm_snapshot", [])
-        if "result" not in result:
-            raise ProviderError(f"Failed to get snapshot ID.\n{result}")
-
-        return result["result"]
+        return self._make_request("evm_snapshot", [])
 
     def revert(self, snapshot_id: SnapshotID) -> bool:
         if isinstance(snapshot_id, int):
             snapshot_id = HexBytes(snapshot_id).hex()
 
         result = self._make_request("evm_revert", [snapshot_id])
-        return result.get("result") is True
+        return result is True
 
     def unlock_account(self, address: AddressType) -> bool:
         self._make_request("anvil_impersonateAccount", [address])
@@ -345,12 +348,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
             sender = to_checksum_address(sender)  # For mypy
             txn = self.prepare_transaction(txn)
-            original_code = self.get_code(sender)
+            original_code = HexBytes(self.get_code(sender))
             if original_code:
                 self.set_code(sender, "")
 
             try:
-                txn_hash = self.web3.eth.send_transaction(txn.dict())  # type: ignore
+                tx_params = cast(TxParams, txn.dict())
+                txn_hash = self.web3.eth.send_transaction(tx_params)
                 receipt = self.get_receipt(
                     txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
                 )
@@ -362,33 +366,27 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         else:
             receipt = super().send_transaction(txn)
 
-        receipt.raise_for_status()
         return receipt
 
     def get_balance(self, address: str) -> int:
-        # NOTE: Original `web3.eth.get_balance` fails when using Anvil.
         if hasattr(address, "address"):
-            address = address.address  # type: ignore
+            address = address.address
 
-        result = self._make_request("eth_getBalance", [address, "latest"]).get("result")
+        result = self._make_request("eth_getBalance", [address, "latest"])
         if not result:
             raise ProviderError(f"Failed to get balance for account '{address}'.")
 
         return int(result, 16) if isinstance(result, str) else result
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
-        response = self._make_request("trace_transaction", [txn_hash])
-
-        if "error" in response:
-            raise ProviderError(response["error"].get("message", "Failed to get call tree."))
-
-        raw_trace_list = response.get("result", [])
+        raw_trace_list = self._make_request("trace_transaction", [txn_hash])
         trace_list = ParityTraceList.parse_obj(raw_trace_list)
 
         if not trace_list:
             raise ProviderError(f"No trace found for transaction '{txn_hash}'")
 
-        return get_calltree_from_parity_trace(trace_list)
+        receipt = self.chain_manager.get_receipt(txn_hash)
+        return get_calltree_from_parity_trace(trace_list, gas_cost=receipt.gas_used)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         if not len(exception.args):
@@ -423,11 +421,35 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return VirtualMachineError(message=message)
 
-    def set_code(self, address: AddressType, code: str):
-        self._make_request("anvil_setCode", [address, code])
+    def set_block_gas_limit(self, gas_limit: int) -> bool:
+        return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
 
-    def _make_request(self, rpc: str, args: list) -> Any:
-        return self.web3.provider.make_request(RPCEndpoint(rpc), args)
+    def set_code(self, address: AddressType, code: Union[str, bytes, HexBytes]) -> bool:
+        if isinstance(code, bytes):
+            code = code.hex()
+
+        elif isinstance(code, str) and not is_0x_prefixed(code):
+            code = add_0x_prefix(HexStr(code))
+
+        elif not is_hex(code):
+            raise ValueError(f"Value {code} is not convertible to hex")
+
+        self._make_request("anvil_setCode", [address, code])
+        return True
+
+    def _eth_call(self, arguments: List) -> bytes:
+        # Override from Web3Provider because foundry is pickier.
+
+        txn_dict = copy(arguments[0])
+        txn_dict.pop("chainId", None)
+        arguments[0] = txn_dict
+
+        try:
+            result = self._make_request("eth_call", arguments)
+        except Exception as err:
+            raise self.get_virtual_machine_error(err) from err
+
+        return HexBytes(result)
 
 
 class FoundryForkProvider(FoundryProvider):
@@ -442,7 +464,7 @@ class FoundryForkProvider(FoundryProvider):
 
     @property
     def fork_url(self) -> str:
-        return self._upstream_provider.connection_str  # type: ignore
+        return self._upstream_provider.connection_str
 
     @property
     def fork_block_number(self) -> Optional[int]:
@@ -477,7 +499,7 @@ class FoundryForkProvider(FoundryProvider):
 
     @property
     def timeout(self) -> int:
-        return self.config.fork_request_timeout  # type: ignore
+        return self.config.fork_request_timeout
 
     @property
     def _upstream_network_name(self) -> str:
@@ -497,7 +519,7 @@ class FoundryForkProvider(FoundryProvider):
         return config.fork[ecosystem_name][network_name]
 
     @cached_property
-    def _upstream_provider(self) -> ProviderAPI:
+    def _upstream_provider(self) -> UpstreamProvider:
         upstream_network = self.network.ecosystem.networks[self._upstream_network_name]
         upstream_provider_name = self._fork_config.upstream_provider
         # NOTE: if 'upstream_provider_name' is 'None', this gets the default upstream provider.
@@ -507,9 +529,21 @@ class FoundryForkProvider(FoundryProvider):
         super().connect()
 
         # Verify that we're connected to a Foundry node with fork mode.
-        self._upstream_provider.connect()
-        upstream_genesis_block_hash = self._upstream_provider.get_block(0).hash
-        self._upstream_provider.disconnect()
+        upstream_provider = self._upstream_provider
+        upstream_provider.connect()
+        try:
+            upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+        except ExtraDataLengthError as err:
+            if isinstance(upstream_provider, Web3Provider):
+                logger.error(
+                    f"Upstream provider '{upstream_provider.name}' " f"missing Geth PoA middleware."
+                )
+                upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+                upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+            else:
+                raise ProviderError(f"Unable to get genesis block: {err}.") from err
+
+        upstream_provider.disconnect()
 
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(
@@ -544,7 +578,10 @@ class FoundryForkProvider(FoundryProvider):
 
         return cmd
 
-    def reset_fork(self):
-        self._make_request(
-            "anvil_reset", [{"jsonRpcUrl": self.fork_url, "blockNumber": self.fork_block_number}]
-        )
+    def reset_fork(self, block_number: Optional[int] = None):
+        forking_params: Dict[str, Union[str, int]] = {"jsonRpcUrl": self.fork_url}
+        block_number = block_number if block_number is not None else self.fork_block_number
+        if block_number is not None:
+            forking_params["blockNumber"] = block_number
+
+        return self._make_request("anvil_reset", [{"forking": forking_params}])

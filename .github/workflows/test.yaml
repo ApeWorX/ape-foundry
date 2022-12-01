@@ -2,6 +2,11 @@ on: ["push", "pull_request"]
 
 name: Test
 
+# Prevent running twice if triggered by multiple events.
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
     linting:
         runs-on: ubuntu-latest
@@ -72,14 +77,9 @@ jobs:
           run: pip install .[test]
 
         - name: Run Tests
-          run: pytest -m "not fork and not manual and not fuzzing"
+          run: pytest -m "not manual and not fuzzing"
           env:
             RUST_BACKTRACE: full
-
-        - name: Run Fork Tests
-          run: |
-            pytest -m fork
-          env:
             WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}
 
 # NOTE: uncomment this block after you've marked tests with @pytest.mark.fuzzing

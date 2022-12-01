@@ -28,6 +28,7 @@ def test_fork_config(config, network):
     assert network_config.get("upstream_provider") == "alchemy", "config not registered"
 
 
+@pytest.mark.fork
 @pytest.mark.parametrize("upstream_network,port", [("mainnet", 8998), ("goerli", 8999)])
 def test_impersonate(networks, accounts, upstream_network, port, create_fork_provider):
     provider = create_fork_provider(port=port, network=upstream_network)
@@ -45,6 +46,7 @@ def test_impersonate(networks, accounts, upstream_network, port, create_fork_pro
     networks.active_provider = orig_provider
 
 
+@pytest.mark.fork
 def test_request_timeout(networks, config, create_fork_provider):
     provider = create_fork_provider(9008)
     provider.connect()
@@ -61,6 +63,7 @@ def test_request_timeout(networks, config, create_fork_provider):
             assert provider.timeout == 300
 
 
+@pytest.mark.fork
 def test_reset_fork_no_fork_block_number(networks, create_fork_provider):
     provider = create_fork_provider(port=9013, network="goerli")
     provider.connect()
@@ -72,6 +75,7 @@ def test_reset_fork_no_fork_block_number(networks, create_fork_provider):
     provider.disconnect()
 
 
+@pytest.mark.fork
 def test_reset_fork_specify_block_number_via_argument(networks, create_fork_provider):
     provider = create_fork_provider(port=9020, network="goerli")
     provider.connect()
@@ -84,6 +88,7 @@ def test_reset_fork_specify_block_number_via_argument(networks, create_fork_prov
     provider.disconnect()
 
 
+@pytest.mark.fork
 def test_reset_fork_specify_block_number_via_config(networks, create_fork_provider):
     provider = create_fork_provider(port=9030)
     provider.connect()
@@ -94,6 +99,7 @@ def test_reset_fork_specify_block_number_via_config(networks, create_fork_provid
     provider.disconnect()
 
 
+@pytest.mark.fork
 def test_transaction(owner, fork_contract_instance):
     receipt = fork_contract_instance.setNumber(6, sender=owner)
     assert receipt.sender == owner
@@ -102,12 +108,14 @@ def test_transaction(owner, fork_contract_instance):
     assert value == 6
 
 
+@pytest.mark.fork
 def test_revert(sender, fork_contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError, match="!authorized"):
         fork_contract_instance.setNumber(6, sender=sender)
 
 
+@pytest.mark.fork
 def test_contract_revert_no_message(owner, fork_contract_instance, connected_mainnet_fork_provider):
     # Set balance so test wouldn't normally fail from lack of funds
     connected_mainnet_fork_provider.set_balance(fork_contract_instance.address, "1000 ETH")
@@ -117,6 +125,7 @@ def test_contract_revert_no_message(owner, fork_contract_instance, connected_mai
         fork_contract_instance.setNumber(5, sender=owner)
 
 
+@pytest.mark.fork
 def test_transaction_contract_as_sender(
     fork_contract_instance, connected_mainnet_fork_provider, convert
 ):
@@ -125,6 +134,7 @@ def test_transaction_contract_as_sender(
     fork_contract_instance.setNumber(10, sender=fork_contract_instance)
 
 
+@pytest.mark.fork
 def test_transaction_unknown_contract_as_sender(accounts, networks, create_fork_provider):
     provider = create_fork_provider(9012)
     provider.connect()
@@ -136,6 +146,7 @@ def test_transaction_unknown_contract_as_sender(accounts, networks, create_fork_
     networks.active_provider = init_provider
 
 
+@pytest.mark.fork
 def test_get_receipt(connected_mainnet_fork_provider, fork_contract_instance, owner):
     receipt = fork_contract_instance.setAddress(owner.address, sender=owner)
     actual = connected_mainnet_fork_provider.get_receipt(receipt.txn_hash)

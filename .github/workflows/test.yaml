@@ -56,7 +56,7 @@ jobs:
                 python-version: [3.8, 3.9, "3.10"]
 
         concurrency:
-          group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+          group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.python-version }}
 
         steps:
         - uses: actions/checkout@v2

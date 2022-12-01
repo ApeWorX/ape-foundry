@@ -173,6 +173,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if not self._web3:
                     # Process attempts to get started at this point.
                     self._start()
+                    if not self.stdout_logs_path.is_file():
+                        # Process output not being captured
+                        return
 
                     wait_for_key = "Listening on"
                     timeout = 10
@@ -543,7 +546,6 @@ class FoundryForkProvider(FoundryProvider):
                 raise ProviderError(f"Unable to get genesis block: {err}.") from err
 
         upstream_provider.disconnect()
-
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(
                 "Upstream network has mismatching genesis block. "

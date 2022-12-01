@@ -442,9 +442,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         txn_dict = copy(arguments[0])
         txn_dict.pop("chainId", None)
+        arguments[0] = txn_dict
 
         try:
-            result = self._make_request("eth_call", [txn_dict])
+            result = self._make_request("eth_call", arguments)
         except Exception as err:
             raise self.get_virtual_machine_error(err) from err
 

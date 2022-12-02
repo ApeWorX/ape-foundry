@@ -47,23 +47,15 @@ def full_contracts_cache(config):
     shutil.copytree(BASE_CONTRACTS_PATH, destination)
 
 
-@pytest.fixture
-def provider(networks):
-    with networks.parse_network_choice(
-        "ethereum:mainnet-fork:foundry", provider_settings={"port": 9001}
-    ) as provider:
-        yield provider
-
-
 @pytest.fixture(
     params=(MAINNET_TXN_HASH, MAINNET_FAIL_TXN_HASH),
 )
-def mainnet_receipt(request, provider):
-    return provider.get_receipt(request.param)
+def mainnet_receipt(request, mainnet_fork_provider):
+    return mainnet_fork_provider.get_receipt(request.param)
 
 
 @pytest.fixture
-def contract_a(owner, provider):
+def contract_a(owner, connected_provider):
     base_path = BASE_CONTRACTS_PATH / "local"
 
     def get_contract_type(suffix: str) -> ContractType:

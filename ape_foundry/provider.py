@@ -142,9 +142,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def is_connected(self) -> bool:
-        if self._web3 is not None and self._web3.is_connected():
-            return True
-
         self._set_web3()
         return self._web3 is not None
 
@@ -217,17 +214,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3 = None
             return
 
-        try:
-            self._web3.eth.get_block_number()
-        except Exception:
-            # Not yet ready
-            self._web3 = None
-            return
-
-        if not self.process:
-            # Connected to already-running process.
-            return
-
         # Verify is actually a Foundry provider,
         # or else skip it to possibly try another port.
         client_version = self._web3.clientVersion
@@ -236,9 +222,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
         else:
             raise ProviderError(
-                f"Port '{self.port}' already in use by another process that isn't a Foundry node."
+                f"Port '{self.port}' already in use by another process that isn't an Anvil node."
             )
 
+        self._set_poa_middleware()
+
+    def _set_poa_middleware(self):
         try:
             block = self.web3.eth.get_block(0)
         except ExtraDataLengthError:

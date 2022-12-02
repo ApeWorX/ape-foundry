@@ -1,6 +1,8 @@
 contracts_folder: data/contracts/ethereum/local
 
 ethereum:
+  mainnet:
+    default_provider: alchemy
   local:
     default_provider: foundry
 

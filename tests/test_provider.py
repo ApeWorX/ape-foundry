@@ -1,6 +1,5 @@
 import re
 import tempfile
-import time
 from pathlib import Path
 
 import pytest
@@ -23,21 +22,20 @@ def test_instantiation(disconnected_provider):
     assert disconnected_provider.name == "foundry"
 
 
-def test_connect_and_disconnect(create_provider):
+def test_connect_and_disconnect(disconnected_provider):
     # Use custom port to prevent connecting to a port used in another test.
 
-    foundry = create_provider()
-    foundry.port = 8555
-    foundry.connect()
+    disconnected_provider.port = 8555
+    disconnected_provider.connect()
 
     try:
-        assert foundry.is_connected
-        assert foundry.chain_id == FOUNDRY_CHAIN_ID
+        assert disconnected_provider.is_connected
+        assert disconnected_provider.chain_id == FOUNDRY_CHAIN_ID
     finally:
-        foundry.disconnect()
+        disconnected_provider.disconnect()
 
-    assert not foundry.is_connected
-    assert foundry.process is None
+    assert not disconnected_provider.is_connected
+    assert disconnected_provider.process is None
 
 
 def test_gas_price(connected_provider):
@@ -67,46 +65,6 @@ def test_uri(connected_provider):
 )
 def test_rpc_methods(connected_provider, method, args, expected):
     assert method(connected_provider, *args) == expected
-
-
-def test_multiple_instances(create_provider):
-    """
-    Validate the somewhat tricky internal logic of running multiple Foundry subprocesses
-    under a single parent process.
-    """
-    # instantiate the providers (which will start the subprocesses) and validate the ports
-    provider_1 = create_provider()
-    provider_1.port = 8556
-    provider_1.connect()
-
-    # NOTE: Sleep because Foundry is fast and we want the chains to have different hashes
-    time.sleep(1)
-
-    provider_2 = create_provider()
-    provider_2.port = 8557
-    provider_2.connect()
-    time.sleep(1)
-
-    provider_3 = create_provider()
-    provider_3.port = 8558
-    provider_3.connect()
-    time.sleep(1)
-
-    # The web3 clients must be different in the provider instances (compared to the
-    # behavior of the EthereumProvider base class, where it's a shared classvar)
-    assert provider_1._web3 != provider_2._web3 != provider_3._web3
-
-    assert provider_1.port == 8556
-    assert provider_2.port == 8557
-    assert provider_3.port == 8558
-
-    provider_1.mine()
-    provider_2.mine()
-    provider_3.mine()
-    hash_1 = provider_1.get_block("latest").hash
-    hash_2 = provider_2.get_block("latest").hash
-    hash_3 = provider_3.get_block("latest").hash
-    assert hash_1 != hash_2 != hash_3
 
 
 def test_set_block_gas_limit(connected_provider):
@@ -164,20 +122,20 @@ def test_get_call_tree(connected_provider, sender, receiver):
     call_tree = connected_provider.get_call_tree(transfer.txn_hash)
     assert isinstance(call_tree, CallTreeNode)
     assert call_tree.call_type == CallType.CALL
-    assert repr(call_tree) == "CALL: 0xc89D42189f0450C2b2c3c61f58Ec5d628176A1E7 [21000 gas]"
+    assert repr(call_tree) == "CALL: 0xc89D42189f0450C2b2c3c61f58Ec5d628176A1E7 [0 gas]"
 
 
-def test_request_timeout(connected_provider, config, create_provider):
+def test_request_timeout(connected_provider, config):
+    # Test value set in `ape-config.yaml`
+    expected = 29
     actual = connected_provider.web3.provider._request_kwargs["timeout"]
-    expected = 29  # Value set in `ape-config.yaml`
     assert actual == expected
 
     # Test default behavior
     with tempfile.TemporaryDirectory() as temp_dir_str:
         temp_dir = Path(temp_dir_str)
         with config.using_project(temp_dir):
-            provider = create_provider()
-            assert provider.timeout == 30
+            assert connected_provider.timeout == 30
 
 
 def test_send_transaction(contract_instance, owner):

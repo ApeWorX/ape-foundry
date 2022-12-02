@@ -15,7 +15,7 @@ from ape.exceptions import APINotImplementedError, UnknownSnapshotError
 from ape.managers.config import CONFIG_FILE_NAME
 from ethpm_types import ContractType
 
-from ape_foundry import FoundryForkProvider, FoundryProvider
+from ape_foundry import FoundryProvider
 
 # NOTE: Ensure that we don't use local paths for the DATA FOLDER
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
@@ -24,6 +24,8 @@ BASE_CONTRACTS_PATH = Path(__file__).parent / "data" / "contracts"
 
 # Needed to test tracing support in core `ape test` command.
 pytest_plugins = ["pytester"]
+MAINNET_FORK_PORT = 9001
+GOERLI_FORK_PORT = 9002
 
 
 def pytest_runtest_makereport(item, call):
@@ -104,20 +106,6 @@ def networks():
     return ape.networks
 
 
-@pytest.fixture(scope="session")
-def create_provider(local_network_api):
-    def method():
-        return FoundryProvider(
-            name="foundry",
-            network=local_network_api,
-            request_header={},
-            data_folder=Path("."),
-            provider_settings={},
-        )
-
-    return method
-
-
 @pytest.fixture(params=("solidity", "vyper"))
 def raw_contract_type(request):
     path = BASE_CONTRACTS_PATH / "ethereum" / "local" / f"{request.param}_contract.json"
@@ -166,25 +154,40 @@ def connected_provider(networks, local_network_api):
 
 
 @pytest.fixture(scope="session")
-def disconnected_provider(create_provider):
-    return create_provider()
+def disconnected_provider(local_network_api):
+    return FoundryProvider(
+        name="foundry",
+        network=local_network_api,
+        request_header={},
+        data_folder=Path("."),
+        provider_settings={},
+    )
 
 
-@pytest.fixture(scope="session")
-def create_fork_provider(networks):
-    def method(port: int = 9001, network: str = "mainnet"):
-        network_api = networks.ecosystems["ethereum"][f"{network}-fork"]
-        provider = FoundryForkProvider(
-            name="foundry",
-            network=network_api,
-            request_header={},
-            data_folder=Path("."),
-            provider_settings={},
-        )
-        provider.port = port
-        return provider
+@pytest.fixture
+def mainnet_fork_port():
+    return MAINNET_FORK_PORT
 
-    return method
+
+@pytest.fixture
+def mainnet_fork_provider(networks, mainnet_fork_port):
+    with networks.parse_network_choice(
+        "ethereum:mainnet-fork:foundry", provider_settings={"port": mainnet_fork_port}
+    ) as provider:
+        yield provider
+
+
+@pytest.fixture
+def goerli_fork_port():
+    return GOERLI_FORK_PORT
+
+
+@pytest.fixture
+def goerli_fork_provider(networks, goerli_fork_port):
+    with networks.parse_network_choice(
+        "ethereum:goerli-fork:foundry", provider_settings={"port": goerli_fork_port}
+    ) as provider:
+        yield provider
 
 
 @pytest.fixture(scope="session")

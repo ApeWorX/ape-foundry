@@ -142,9 +142,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def is_connected(self) -> bool:
-        if self._web3 is not None and self._web3.is_connected():
-            return True
-
         self._set_web3()
         return self._web3 is not None
 
@@ -173,6 +170,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if not self._web3:
                     # Process attempts to get started at this point.
                     self._start()
+                    if not self.stdout_logs_path.is_file():
+                        # Process output not being captured
+                        return
 
                     wait_for_key = "Listening on"
                     timeout = 10
@@ -214,17 +214,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3 = None
             return
 
-        try:
-            self._web3.eth.get_block_number()
-        except Exception:
-            # Not yet ready
-            self._web3 = None
-            return
-
-        if not self.process:
-            # Connected to already-running process.
-            return
-
         # Verify is actually a Foundry provider,
         # or else skip it to possibly try another port.
         client_version = self._web3.clientVersion
@@ -233,9 +222,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
         else:
             raise ProviderError(
-                f"Port '{self.port}' already in use by another process that isn't a Foundry node."
+                f"Port '{self.port}' already in use by another process that isn't an Anvil node."
             )
 
+        self._set_poa_middleware()
+
+    def _set_poa_middleware(self):
         try:
             block = self.web3.eth.get_block(0)
         except ExtraDataLengthError:
@@ -385,8 +377,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not trace_list:
             raise ProviderError(f"No trace found for transaction '{txn_hash}'")
 
-        receipt = self.chain_manager.get_receipt(txn_hash)
-        return get_calltree_from_parity_trace(trace_list, gas_cost=receipt.gas_used)
+        return get_calltree_from_parity_trace(trace_list)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         if not len(exception.args):
@@ -544,7 +535,6 @@ class FoundryForkProvider(FoundryProvider):
                 raise ProviderError(f"Unable to get genesis block: {err}.") from err
 
         upstream_provider.disconnect()
-
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(
                 "Upstream network has mismatching genesis block. "

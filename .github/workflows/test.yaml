@@ -77,7 +77,14 @@ jobs:
           run: pip install .[test]
 
         - name: Run Tests
-          run: pytest -m "not manual and not fuzzing"
+          run: pytest -m "not fork and not manual and not fuzzing"
+          env:
+            RUST_BACKTRACE: full
+
+        - name: Run Fork Tests (Alchemy)
+          # Only run tests requiring Alchemy if not from a forked repo (Else it always fails)
+          if: github.event.pull_request.head.repo.full_name == github.repository
+          run: pytest -m fork
           env:
             RUST_BACKTRACE: full
             WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}

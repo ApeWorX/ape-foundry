@@ -157,10 +157,8 @@ def test_revert(sender, contract_instance):
 
 def test_contract_revert_no_message(owner, contract_instance):
     # The Contract raises empty revert when setting number to 5.
-    with pytest.raises(ContractLogicError) as err:
+    with pytest.raises(ContractLogicError, match="Transaction failed."):
         contract_instance.setNumber(5, sender=owner)
-
-    assert str(err.value) == "Transaction failed."
 
 
 def test_transaction_contract_as_sender(contract_instance, connected_provider):

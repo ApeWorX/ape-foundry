@@ -24,7 +24,7 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, BlockID, SnapshotID
+from ape.types import AddressType, BlockID, ContractCode, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
@@ -415,7 +415,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
 
-    def set_code(self, address: AddressType, code: Union[str, bytes, HexBytes]) -> bool:
+    def set_code(self, address: AddressType, code: ContractCode) -> bool:
         if isinstance(code, bytes):
             code = code.hex()
 
@@ -527,7 +527,7 @@ class FoundryForkProvider(FoundryProvider):
         except ExtraDataLengthError as err:
             if isinstance(upstream_provider, Web3Provider):
                 logger.error(
-                    f"Upstream provider '{upstream_provider.name}' " f"missing Geth PoA middleware."
+                    f"Upstream provider '{upstream_provider.name}' missing Geth PoA middleware."
                 )
                 upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
                 upstream_genesis_block_hash = upstream_provider.get_block(0).hash

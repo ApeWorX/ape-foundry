@@ -44,8 +44,6 @@ from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundryS
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
-FOUNDRY_START_NETWORK_RETRIES = [0.1, 0.2, 0.3, 0.5, 1.0]  # seconds between network retries
-FOUNDRY_START_PROCESS_ATTEMPTS = 3  # number of attempts to start subprocess before giving up
 DEFAULT_PORT = 8545
 FOUNDRY_CHAIN_ID = 31337
 
@@ -60,8 +58,6 @@ class FoundryNetworkConfig(PluginConfig):
     port: Optional[Union[int, Literal["auto"]]] = DEFAULT_PORT
 
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
-    network_retries: List[float] = FOUNDRY_START_NETWORK_RETRIES
-    process_attempts: int = FOUNDRY_START_PROCESS_ATTEMPTS
     request_timeout: int = 30
     fork_request_timeout: int = 300
 
@@ -216,7 +212,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         # Verify is actually a Foundry provider,
         # or else skip it to possibly try another port.
-        client_version = self._web3.clientVersion
+        # TODO: Once we are on web3.py 0.6.0b8 or later, can just use snake_case here.
+        client_version = getattr(self._web3, "client_version", getattr(self._web3, "clientVersion"))
 
         if "anvil" in client_version.lower():
             self._web3.eth.set_gas_price_strategy(rpc_gas_price_strategy)

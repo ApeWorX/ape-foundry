@@ -44,10 +44,10 @@ def test_gas_price(connected_provider):
 
 
 def test_uri_disconnected(disconnected_provider):
-    with pytest.raises(FoundryProviderError) as err:
+    with pytest.raises(
+        FoundryProviderError, match=r"Can't build URI before `connect\(\)` is called\."
+    ):
         _ = disconnected_provider.uri
-
-    assert "Can't build URI before `connect()` is called." in str(err.value)
 
 
 def test_uri(connected_provider):
@@ -93,7 +93,7 @@ def test_revert_failure(connected_provider):
 
 
 def test_get_balance(connected_provider, owner):
-    assert connected_provider.get_balance(owner)
+    assert connected_provider.get_balance(owner.address)
 
 
 def test_snapshot_and_revert(connected_provider):
@@ -149,10 +149,8 @@ def test_send_transaction(contract_instance, owner):
 
 def test_revert(sender, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
-    with pytest.raises(ContractLogicError) as err:
+    with pytest.raises(ContractLogicError, message="!authorized"):
         contract_instance.setNumber(6, sender=sender)
-
-    assert str(err.value) == "!authorized"
 
 
 def test_contract_revert_no_message(owner, contract_instance):

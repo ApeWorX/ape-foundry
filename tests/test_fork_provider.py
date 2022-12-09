@@ -126,9 +126,6 @@ def test_revert(sender, mainnet_fork_contract_instance):
 
 @pytest.mark.fork
 def test_contract_revert_no_message(owner, mainnet_fork_contract_instance, mainnet_fork_provider):
-    # Set balance so test wouldn't normally fail from lack of funds
-    mainnet_fork_provider.set_balance(mainnet_fork_contract_instance.address, "1000 ETH")
-
     # The Contract raises empty revert when setting number to 5.
     with pytest.raises(ContractLogicError, match="Transaction failed."):
         mainnet_fork_contract_instance.setNumber(5, sender=owner)

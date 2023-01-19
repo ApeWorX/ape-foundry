@@ -72,7 +72,7 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.5.6,<0.6",
+        "eth-ape>=0.6.0,<0.7",
         "evm-trace>=0.1.0a13",
         "hexbytes",  # Use same version as eth-ape
         "web3",  # Use same version as eth-ape

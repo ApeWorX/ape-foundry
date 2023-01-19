@@ -14,7 +14,7 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
     return owner.deploy(contract_container)
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_multiple_providers(networks, connected_provider, mainnet_fork_port, goerli_fork_port):
     assert networks.active_provider.name == "foundry"
     assert networks.active_provider.network.name == "local"
@@ -50,7 +50,7 @@ def test_fork_config(config, network):
     assert network_config.get("upstream_provider") == "alchemy", "config not registered"
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_goerli_impersonate(accounts, goerli_fork_provider):
     impersonated_account = accounts[TEST_ADDRESS]
     other_account = accounts[0]
@@ -59,7 +59,7 @@ def test_goerli_impersonate(accounts, goerli_fork_provider):
     assert receipt.sender == impersonated_account
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_mainnet_impersonate(accounts, mainnet_fork_provider):
     impersonated_account = accounts[TEST_ADDRESS]
     other_account = accounts[0]
@@ -68,7 +68,7 @@ def test_mainnet_impersonate(accounts, mainnet_fork_provider):
     assert receipt.sender == impersonated_account
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_request_timeout(networks, config, mainnet_fork_provider):
     actual = mainnet_fork_provider.web3.provider._request_kwargs["timeout"]
     expected = 360  # Value set in `ape-config.yaml`
@@ -81,7 +81,7 @@ def test_request_timeout(networks, config, mainnet_fork_provider):
             assert networks.active_provider.timeout == 300
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_reset_fork_no_fork_block_number(networks, goerli_fork_provider):
     goerli_fork_provider.mine(5)
     prev_block_num = goerli_fork_provider.get_block("latest").number
@@ -90,7 +90,7 @@ def test_reset_fork_no_fork_block_number(networks, goerli_fork_provider):
     assert block_num_after_reset < prev_block_num
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_reset_fork_specify_block_number_via_argument(networks, goerli_fork_provider):
     goerli_fork_provider.mine(5)
     prev_block_num = goerli_fork_provider.get_block("latest").number
@@ -100,7 +100,7 @@ def test_reset_fork_specify_block_number_via_argument(networks, goerli_fork_prov
     assert block_num_after_reset == new_block_number
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_reset_fork_specify_block_number_via_config(networks, mainnet_fork_provider):
     mainnet_fork_provider.mine(5)
     mainnet_fork_provider.reset_fork()
@@ -108,7 +108,7 @@ def test_reset_fork_specify_block_number_via_config(networks, mainnet_fork_provi
     assert block_num_after_reset == 15776634  # Specified in ape-config.yaml
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_transaction(owner, mainnet_fork_contract_instance):
     receipt = mainnet_fork_contract_instance.setNumber(6, sender=owner)
     assert receipt.sender == owner
@@ -117,21 +117,21 @@ def test_transaction(owner, mainnet_fork_contract_instance):
     assert value == 6
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_revert(sender, mainnet_fork_contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError, match="!authorized"):
         mainnet_fork_contract_instance.setNumber(6, sender=sender)
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_contract_revert_no_message(owner, mainnet_fork_contract_instance, mainnet_fork_provider):
     # The Contract raises empty revert when setting number to 5.
     with pytest.raises(ContractLogicError, match="Transaction failed."):
         mainnet_fork_contract_instance.setNumber(5, sender=owner)
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_transaction_contract_as_sender(
     mainnet_fork_contract_instance, mainnet_fork_provider, convert
 ):
@@ -140,7 +140,7 @@ def test_transaction_contract_as_sender(
     mainnet_fork_contract_instance.setNumber(10, sender=mainnet_fork_contract_instance)
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_transaction_unknown_contract_as_sender(accounts, networks, mainnet_fork_provider):
     account = "0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"
     multi_sig = accounts[account]
@@ -148,7 +148,7 @@ def test_transaction_unknown_contract_as_sender(accounts, networks, mainnet_fork
     assert not receipt.failed
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_get_receipt(mainnet_fork_provider, mainnet_fork_contract_instance, owner):
     receipt = mainnet_fork_contract_instance.setAddress(owner.address, sender=owner)
     actual = mainnet_fork_provider.get_receipt(receipt.txn_hash)

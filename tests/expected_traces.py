@@ -51,22 +51,22 @@ AggregationRouterV4\.uniswapV3Swap\(
     5789604461865809771178549250512551984713807685540901737341300416798777562476
 """
 MAINNET_FAIL_TRACE_LAST_10_LINES = r"""
-    │   ├── 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640\.0xd21220a7\(\) ->
-    │   │   0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2
-    │   ├── 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640\.0xddca3f43\(\) ->
-    │   │   0x00000000000000000000000000000000000000000000000000000000000001f4
-    │   └── WETH.transfer\(
-    │         dst=0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640,
-    │         wad=2098831888913057968
-    │       \) -> True
-    └── WETH\.balanceOf\(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640\) ->
-        68359883632315875514968
+    │     amount0Delta=-4192051335,
+    │     amount1Delta=2098831888913057968,
+    │     0x00\.\.097d
+    │   \) \[9861 gas\]
+    │   ├── UniswapV3Pool.token0\(\) -> FiatTokenProxy \[266 gas\]
+    │   ├── UniswapV3Pool\.token1\(\) -> WETH \[308 gas\]
+    │   ├── UniswapV3Pool\.fee\(\) -> 500 \[251 gas\]
+    │   └── WETH\.transfer\(dst=UniswapV3Pool, wad=2098831888913057968\) -> True
+    │       \[6062 gas\]
+    └── WETH\.balanceOf\(UniswapV3Pool\) -> 68359883632315875514968 \[534 gas\]
 """
 MAINNET_TRACE_FIRST_10_LINES = r"""
 Call trace for
 '0xb7d7f1d5ce7743e821d3026647df486f517946ef1342a1ae93c96e4a8016eab7'
 tx\.origin=0x5668EAd1eDB8E2a4d724C8fb9cB5fFEabEB422dc
-DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> '' \[1249147 gas\]
+DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> '' \[\d+ gas\]
 └── \(delegate\) LoanShifterTaker\.moveLoan\(
       _exchangeData=\[
         0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE,
@@ -75,10 +75,10 @@ DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> '' \[1249147
         0,
 """
 MAINNET_TRACE_LAST_10_LINES = r"""
-    │                   └── LendingRateOracle\.getMarketBorrowRate\(_asset=DAI\) ->
-    │                       35000000000000000000000000
-    ├── DSProxy\.authority\(\) -> DSGuard
+    │                       35000000000000000000000000 \[1164 gas\]
+    ├── DSProxy\.authority\(\) -> DSGuard \[1291 gas\]
     ├── DSGuard\.forbid\(src=LoanShifterReceiver, dst=DSProxy, sig=0x1c\.\.0000\)
+    │   \[5253 gas\]
     └── DefisaverLogger\.Log\(
           _contract=DSProxy,
           _caller=tx\.origin,

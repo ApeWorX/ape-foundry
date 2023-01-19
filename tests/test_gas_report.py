@@ -82,7 +82,7 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
         assert re.match(expected_pattern, actual_line), message
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_gas_flag_in_tests(ape_pytester):
     result = ape_pytester.runpytest("--gas")
     run_gas_test(result)
@@ -91,7 +91,7 @@ def test_gas_flag_in_tests(ape_pytester):
     run_gas_test(result)
 
 
-@pytest.mark.sync
+@pytest.mark.fork
 def test_gas_flag_exclude_method_using_cli_option(ape_pytester):
     # NOTE: Includes both a mutable and a view method.
     expected = filter_expected_methods("fooAndBar", "myNumber")

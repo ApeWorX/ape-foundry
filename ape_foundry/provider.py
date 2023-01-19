@@ -24,12 +24,12 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, BlockID, ContractCode, SnapshotID
+from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
-from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
+from evm_trace import ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ExtraDataLengthError
@@ -374,7 +374,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not trace_list:
             raise ProviderError(f"No trace found for transaction '{txn_hash}'")
 
-        return get_calltree_from_parity_trace(trace_list)
+        evm_call = get_calltree_from_parity_trace(trace_list)
+        return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
 
     def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
         if not len(exception.args):

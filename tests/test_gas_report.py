@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-BASE_DATA_PATH = Path(__file__).parent / "data" / "python"
+TESTS_PATH = Path(__file__).parent
+BASE_DATA_PATH = TESTS_PATH / "data" / "python"
 CONFTEST = (BASE_DATA_PATH / "pytest_test_conftest.py").read_text()
 TEST_FILE = (BASE_DATA_PATH / "pytest_tests.py").read_text()
 NUM_TESTS = len([x for x in TEST_FILE.split("\n") if x.startswith("def test_")])
@@ -13,6 +14,7 @@ TOKEN_B_GAS_REPORT = r"""
   Method +Times called +Min. +Max. +Mean +Median
  ─+
   balanceOf +\d +\d+ + \d+ + \d+ + \d+
+  transfer +\d +\d+ + \d+ + \d+ + \d+
 """
 EXPECTED_GAS_REPORT = rf"""
  +TestContractVy Gas
@@ -21,12 +23,14 @@ EXPECTED_GAS_REPORT = rf"""
  ─+
   myNumber +\d +\d+ + \d+ + \d+ + \d+
   setNumber +\d +\d+ + \d+ + \d+ + \d+
+  fooAndBar +\d +\d+ + \d+ + \d+ + \d+
 
  +TokenA Gas
 
   Method +Times called +Min. +Max. +Mean +Median
  ─+
   balanceOf +\d +\d+ + \d+ + \d+ + \d+
+  transfer +\d +\d+ + \d+ + \d+ + \d+
 {TOKEN_B_GAS_REPORT}
 """
 
@@ -61,6 +65,16 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
     end_index = start_index + len(expected)
     actual = [x.rstrip() for x in result.outlines[start_index:end_index] if x.rstrip]
     assert "WARNING: No gas usage data found." not in actual, "Gas data missing!"
+
+    actual_len = len(actual)
+    expected_len = len(expected)
+
+    if actual_len > expected_len:
+        remainder = "\n".join(actual[expected_len:])
+        pytest.fail(f"Actual contains more than expected:\n{remainder}")
+    elif expected_len > actual_len:
+        remainder = "\n".join(expected[actual_len:])
+        pytest.fail(f"Expected contains more than actual:\n{remainder}")
 
     for actual_line, expected_pattern in zip(actual, expected):
         message = f"Pattern: {expected_pattern}, Line: '{actual_line}'."

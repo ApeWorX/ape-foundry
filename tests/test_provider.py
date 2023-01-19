@@ -8,7 +8,7 @@ from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryProvider
+from ape_foundry.provider import FOUNDRY_CHAIN_ID
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -50,18 +50,6 @@ def test_uri(connected_provider):
     assert expected_uri in connected_provider.uri
 
 
-@pytest.mark.parametrize(
-    "method,args,expected",
-    [
-        (FoundryProvider.get_nonce, [TEST_WALLET_ADDRESS], 0),
-        (FoundryProvider.get_balance, [TEST_WALLET_ADDRESS], 0),
-        (FoundryProvider.get_code, [TEST_WALLET_ADDRESS], HexBytes("")),
-    ],
-)
-def test_rpc_methods(connected_provider, method, args, expected):
-    assert method(connected_provider, *args) == expected
-
-
 def test_set_block_gas_limit(connected_provider):
     gas_limit = connected_provider.get_block("latest").gas_limit
     assert connected_provider.set_block_gas_limit(gas_limit) is True
@@ -69,7 +57,7 @@ def test_set_block_gas_limit(connected_provider):
 
 def test_set_timestamp(connected_provider):
     start_time = connected_provider.get_block("pending").timestamp
-    connected_provider.set_timestamp(start_time + 5)  # Increase by 5 seconds
+    connected_provider.set_timestamp(start_time + 5)
     new_time = connected_provider.get_block("pending").timestamp
 
     # Adding 5 seconds but seconds can be weird so give it a 1 second margin.

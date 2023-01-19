@@ -13,8 +13,8 @@ from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryProvider
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
 
-def test_instantiation(disconnected_provider):
-    assert disconnected_provider.name == "foundry"
+def test_instantiation(disconnected_provider, name):
+    assert disconnected_provider.name == name
 
 
 def test_connect_and_disconnect(disconnected_provider):

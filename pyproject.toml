@@ -30,7 +30,7 @@ python_files = "test_*.py"
 testpaths = "tests"
 markers = """
 fuzzing: Run Hypothesis fuzz test suite
-fork: Run forked-network tests using Alchemy as the upstream provider
+sync: Run without x-dist
 manual: Tests you want to avoid running in automated CI/CD because of expense
 """
 

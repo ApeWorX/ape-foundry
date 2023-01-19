@@ -304,7 +304,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
-        result = self._make_request("evm_mine", [{"blocks": num_blocks}])
+        result = self._make_request("evm_mine", [{"blocks": num_blocks, "timestamp": None}])
         if result != "0x0":
             raise ProviderError(f"Failed to mine.\n{result}")
 

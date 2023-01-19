@@ -38,7 +38,7 @@ def pytest_runtest_makereport(item, call):
 
 
 @contextmanager
-def _isolation():
+def _isolate():
     if ape.networks.active_provider is None:
         raise AssertionError("Isolation should only be used with a connected provider.")
 
@@ -71,7 +71,7 @@ def _isolation():
 
 @pytest.fixture(autouse=True)
 def main_provider_isolation(connected_provider):
-    with _isolation():
+    with _isolate():
         yield
 
 

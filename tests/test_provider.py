@@ -1,4 +1,3 @@
-import re
 import tempfile
 from pathlib import Path
 
@@ -12,11 +11,6 @@ from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryProvider
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
-
-
-@pytest.fixture(scope="module")
-def call_expression():
-    return re.compile(r"CALL: 0x([a-f]|[A-F]|\d)*.<0x([a-f]|[A-F]|\d)*> \[\d* gas]")
 
 
 def test_instantiation(disconnected_provider):

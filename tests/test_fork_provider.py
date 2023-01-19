@@ -16,7 +16,9 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
 
 
 @pytest.mark.fork
-def test_multiple_providers(name, networks, connected_provider, mainnet_fork_port, goerli_fork_port):
+def test_multiple_providers(
+    name, networks, connected_provider, mainnet_fork_port, goerli_fork_port
+):
     assert networks.active_provider.name == name
     assert networks.active_provider.network.name == LOCAL_NETWORK_NAME
     assert networks.active_provider.port == 8545

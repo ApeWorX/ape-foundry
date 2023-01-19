@@ -85,7 +85,7 @@ def test_request_timeout(networks, config, mainnet_fork_provider):
 
 
 @pytest.mark.fork
-def test_reset_fork_no_fork_block_number(networks, goerli_fork_provider):
+def test_reset_fork_no_fork_block_number(goerli_fork_provider):
     goerli_fork_provider.mine(5)
     prev_block_num = goerli_fork_provider.get_block("latest").number
     goerli_fork_provider.reset_fork()
@@ -94,7 +94,7 @@ def test_reset_fork_no_fork_block_number(networks, goerli_fork_provider):
 
 
 @pytest.mark.fork
-def test_reset_fork_specify_block_number_via_argument(networks, goerli_fork_provider):
+def test_reset_fork_specify_block_number_via_argument(goerli_fork_provider):
     goerli_fork_provider.mine(5)
     prev_block_num = goerli_fork_provider.get_block("latest").number
     new_block_number = prev_block_num - 1
@@ -104,7 +104,7 @@ def test_reset_fork_specify_block_number_via_argument(networks, goerli_fork_prov
 
 
 @pytest.mark.fork
-def test_reset_fork_specify_block_number_via_config(networks, mainnet_fork_provider):
+def test_reset_fork_specify_block_number_via_config(mainnet_fork_provider):
     mainnet_fork_provider.mine(5)
     mainnet_fork_provider.reset_fork()
     block_num_after_reset = mainnet_fork_provider.get_block("latest").number
@@ -144,7 +144,7 @@ def test_transaction_contract_as_sender(
 
 
 @pytest.mark.fork
-def test_transaction_unknown_contract_as_sender(accounts, networks, mainnet_fork_provider):
+def test_transaction_unknown_contract_as_sender(accounts, mainnet_fork_provider):
     account = "0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"
     multi_sig = accounts[account]
     receipt = multi_sig.transfer(accounts[0], "100 gwei")

@@ -9,7 +9,6 @@ import ape
 import pytest
 import yaml
 from _pytest.runner import pytest_runtest_makereport as orig_pytest_runtest_makereport
-from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer
 from ape.exceptions import APINotImplementedError, UnknownSnapshotError
 from ape.managers.config import CONFIG_FILE_NAME
@@ -150,19 +149,19 @@ def owner(accounts):
 
 @pytest.fixture(scope="session")
 def local_network_api(networks):
-    return networks.ethereum[LOCAL_NETWORK_NAME]
+    return networks.ethereum.local
 
 
 @pytest.fixture
-def connected_provider(networks, local_network_api):
-    with networks.ethereum.local.use_provider(NAME) as provider:
+def connected_provider(name, networks, local_network_api):
+    with networks.ethereum.local.use_provider(name) as provider:
         yield provider
 
 
 @pytest.fixture(scope="session")
-def disconnected_provider(local_network_api):
+def disconnected_provider(name, local_network_api):
     return FoundryProvider(
-        name=NAME,
+        name=name,
         network=local_network_api,
         request_header={},
         data_folder=Path("."),
@@ -176,9 +175,9 @@ def mainnet_fork_port():
 
 
 @pytest.fixture
-def mainnet_fork_provider(networks, mainnet_fork_port):
+def mainnet_fork_provider(name, networks, mainnet_fork_port):
     with networks.ethereum.mainnet_fork.use_provider(
-        NAME, provider_settings={"port": mainnet_fork_port}
+        name, provider_settings={"port": mainnet_fork_port}
     ) as provider:
         yield provider
 
@@ -189,9 +188,9 @@ def goerli_fork_port():
 
 
 @pytest.fixture
-def goerli_fork_provider(networks, goerli_fork_port):
+def goerli_fork_provider(name, networks, goerli_fork_port):
     with networks.ethereum.goerli_fork.use_provider(
-        NAME, provider_settings={"port": goerli_fork_port}
+        name, provider_settings={"port": goerli_fork_port}
     ) as provider:
         yield provider
 

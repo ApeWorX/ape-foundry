@@ -50,7 +50,8 @@ def test_multiple_providers(
 def test_fork_config(name, config, network):
     plugin_config = config.get_config(name)
     network_config = plugin_config["fork"].get("ethereum", {}).get(network, {})
-    assert network_config.get("upstream_provider") == "alchemy", "config not registered"
+    message = f"Config not registered for network '{network}'."
+    assert network_config.get("upstream_provider") == "alchemy", message
 
 
 @pytest.mark.fork

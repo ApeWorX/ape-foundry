@@ -66,7 +66,7 @@ MAINNET_TRACE_FIRST_10_LINES = r"""
 Call trace for
 '0xb7d7f1d5ce7743e821d3026647df486f517946ef1342a1ae93c96e4a8016eab7'
 tx\.origin=0x5668EAd1eDB8E2a4d724C8fb9cB5fFEabEB422dc
-DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> '' \[\d+ gas\]
+DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> "" \[\d+ gas\]
 └── \(delegate\) LoanShifterTaker\.moveLoan\(
       _exchangeData=\[
         0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE,

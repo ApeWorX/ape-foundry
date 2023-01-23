@@ -48,7 +48,6 @@ def filter_expected_methods(*methods_to_remove: str) -> str:
 def ape_pytester(project, pytester):
     pytester.makeconftest(CONFTEST)
     pytester.makepyfile(TEST_FILE)
-    project._cached_projects = {}
     return pytester
 
 

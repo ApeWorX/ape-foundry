@@ -13,7 +13,7 @@ extras_require = {
         "ape-alchemy",  # For running fork tests
     ],
     "lint": [
-        "black>=22.10.0",  # auto-formatter and linter
+        "black>=22.12.0",  # auto-formatter and linter
         "mypy>=0.991",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed

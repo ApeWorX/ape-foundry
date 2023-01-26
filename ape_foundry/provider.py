@@ -377,15 +377,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         evm_call = get_calltree_from_parity_trace(trace_list)
         return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
 
-    def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
+    def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
+        txn = kwargs.get("txn")
         if not len(exception.args):
-            return VirtualMachineError(base_err=exception)
+            return VirtualMachineError(base_err=exception, txn=txn)
 
         err_data = exception.args[0]
         message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
 
         if not message:
-            return VirtualMachineError(base_err=exception)
+            return VirtualMachineError(base_err=exception, txn=txn)
 
         # Handle `ContactLogicError` similarly to other providers in `ape`.
         # by stripping off the unnecessary prefix that foundry has on reverts.
@@ -394,21 +395,21 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            return ContractLogicError(revert_message=message)
+            return ContractLogicError(revert_message=message, txn=txn)
 
         elif (
             "Transaction reverted without a reason string" in message
             or message.lower() == "execution reverted"
         ):
-            return ContractLogicError()
+            return ContractLogicError(txn=txn)
 
         elif message == "Transaction ran out of gas":
-            return OutOfGasError()  # type: ignore
+            return OutOfGasError(txn=txn)
 
         elif message.startswith("execution reverted: "):
-            raise ContractLogicError(message.replace("execution reverted: ", "").strip())
+            raise ContractLogicError(message.replace("execution reverted: ", "").strip(), txn=txn)
 
-        return VirtualMachineError(message=message)
+        return VirtualMachineError(message, txn=txn)
 
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True

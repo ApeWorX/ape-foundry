@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from ape.exceptions import ContractLogicError, SignatureError
+from ape.exceptions import ContractLogicError
 from ape.types import CallTreeNode
 from evm_trace import CallType
 from hexbytes import HexBytes

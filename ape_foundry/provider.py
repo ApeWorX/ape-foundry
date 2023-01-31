@@ -365,7 +365,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if "nonce too low" in str(vm_err):
                     # Add additional nonce information
                     new_err_msg = f"Nonce '{txn.nonce}' is too low"
-                    raise VirtualMachineError(new_err_msg, base_err=vm_err.base_err, code=vm_err.code)
+                    raise VirtualMachineError(
+                        new_err_msg, base_err=vm_err.base_err, code=vm_err.code
+                    )
 
                 vm_err.txn = txn
                 raise vm_err from err
@@ -394,7 +396,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     vm_err.txn = txn
                     raise vm_err from err
 
-            logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
+            logger.info(
+                f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})"
+            )
             self.chain_manager.history.append(receipt)
             return receipt
 

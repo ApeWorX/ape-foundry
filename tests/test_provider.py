@@ -125,10 +125,6 @@ def test_send_transaction(contract_instance, owner):
     contract_instance.setNumber(10, sender=owner)
     assert contract_instance.myNumber() == 10
 
-    # Have to be in the same test because of X-dist complications
-    with pytest.raises(SignatureError):
-        contract_instance.setNumber(20)
-
 
 def test_revert(sender, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)

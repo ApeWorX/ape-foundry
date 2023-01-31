@@ -9,7 +9,6 @@ import ape
 import pytest
 import yaml
 from _pytest.runner import pytest_runtest_makereport as orig_pytest_runtest_makereport
-from ape.api.networks import LOCAL_NETWORK_NAME
 from ape.contracts import ContractContainer
 from ape.exceptions import APINotImplementedError, UnknownSnapshotError
 from ape.managers.config import CONFIG_FILE_NAME
@@ -21,6 +20,7 @@ from ape_foundry import FoundryProvider
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
 
 BASE_CONTRACTS_PATH = Path(__file__).parent / "data" / "contracts"
+NAME = "foundry"
 
 # Needed to test tracing support in core `ape test` command.
 pytest_plugins = ["pytester"]
@@ -37,8 +37,19 @@ def pytest_runtest_makereport(item, call):
     return tr
 
 
+@pytest.fixture(scope="session")
+def name():
+    return NAME
+
+
+@pytest.fixture(scope="session", autouse=True)
+def in_tests_dir(config):
+    with config.using_project(Path(__file__).parent):
+        yield
+
+
 @contextmanager
-def _isolation():
+def _isolate():
     if ape.networks.active_provider is None:
         raise AssertionError("Isolation should only be used with a connected provider.")
 
@@ -71,13 +82,7 @@ def _isolation():
 
 @pytest.fixture(autouse=True)
 def main_provider_isolation(connected_provider):
-    with _isolation():
-        yield
-
-
-@pytest.fixture(scope="session", autouse=True)
-def in_tests_dir(config):
-    with config.using_project(Path(__file__).parent):
+    with _isolate():
         yield
 
 
@@ -144,19 +149,19 @@ def owner(accounts):
 
 @pytest.fixture(scope="session")
 def local_network_api(networks):
-    return networks.ecosystems["ethereum"][LOCAL_NETWORK_NAME]
+    return networks.ethereum.local
 
 
 @pytest.fixture
-def connected_provider(networks, local_network_api):
-    with networks.parse_network_choice("ethereum:local:foundry") as provider:
+def connected_provider(name, networks, local_network_api):
+    with networks.ethereum.local.use_provider(name) as provider:
         yield provider
 
 
 @pytest.fixture(scope="session")
-def disconnected_provider(local_network_api):
+def disconnected_provider(name, local_network_api):
     return FoundryProvider(
-        name="foundry",
+        name=name,
         network=local_network_api,
         request_header={},
         data_folder=Path("."),
@@ -170,9 +175,9 @@ def mainnet_fork_port():
 
 
 @pytest.fixture
-def mainnet_fork_provider(networks, mainnet_fork_port):
-    with networks.parse_network_choice(
-        "ethereum:mainnet-fork:foundry", provider_settings={"port": mainnet_fork_port}
+def mainnet_fork_provider(name, networks, mainnet_fork_port):
+    with networks.ethereum.mainnet_fork.use_provider(
+        name, provider_settings={"port": mainnet_fork_port}
     ) as provider:
         yield provider
 
@@ -183,16 +188,11 @@ def goerli_fork_port():
 
 
 @pytest.fixture
-def goerli_fork_provider(networks, goerli_fork_port):
-    with networks.parse_network_choice(
-        "ethereum:goerli-fork:foundry", provider_settings={"port": goerli_fork_port}
+def goerli_fork_provider(name, networks, goerli_fork_port):
+    with networks.ethereum.goerli_fork.use_provider(
+        name, provider_settings={"port": goerli_fork_port}
     ) as provider:
         yield provider
-
-
-@pytest.fixture(scope="session")
-def mainnet_fork_network_api(networks):
-    return networks.ecosystems["ethereum"]["mainnet-fork"]
 
 
 @pytest.fixture(scope="session")

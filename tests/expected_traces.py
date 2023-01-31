@@ -40,10 +40,10 @@ ContractA\.methodWithoutArguments\(\) -> 0x00..5174 \[\d+ gas\]
 """
 MAINNET_FAIL_TRACE_FIRST_10_LINES = r"""
 Call trace for
-'0x([A-Fa-f0-9]{64})'
+'0x053cba5c12172654d894f66d5670bab6215517a94189a9ffc09bc40a589ec04d'
 reverted with message: "UNIV3R: min return"
-tx.origin=0x[a-fA-F0-9]{40}
-AggregationRouterV4.uniswapV3Swap\(
+tx\.origin=0xd2f91C13e2D7ABbA4408Cd3D86285b7835524ad7
+AggregationRouterV4\.uniswapV3Swap\(
   amount=12851675475480000000000,
   minReturn=4205588148,
   pools=\[
@@ -51,22 +51,22 @@ AggregationRouterV4.uniswapV3Swap\(
     5789604461865809771178549250512551984713807685540901737341300416798777562476
 """
 MAINNET_FAIL_TRACE_LAST_10_LINES = r"""
-    │   ├── STATICCALL: 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640\.<0xd21220a7>
-    │   │   \[\d+ gas\]
-    │   ├── STATICCALL: 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640\.<0xddca3f43>
-    │   │   \[\d+ gas\]
-    │   └── WETH\.transfer\(
-    │         dst=0x[a-fA-F0-9]{40},
-    │         wad=2098831888913057968
-    │       \) -> True \[\d+ gas\]
-    └── WETH\.balanceOf\(0x[a-fA-F0-9]{40}\) ->
-        68359883632315875514968 \[\d+ gas\]
+    │     amount0Delta=-4192051335,
+    │     amount1Delta=2098831888913057968,
+    │     0x00\.\.097d
+    │   \) \[9861 gas\]
+    │   ├── UniswapV3Pool.token0\(\) -> FiatTokenProxy \[266 gas\]
+    │   ├── UniswapV3Pool\.token1\(\) -> WETH \[308 gas\]
+    │   ├── UniswapV3Pool\.fee\(\) -> 500 \[251 gas\]
+    │   └── WETH\.transfer\(dst=UniswapV3Pool, wad=2098831888913057968\) -> True
+    │       \[6062 gas\]
+    └── WETH\.balanceOf\(UniswapV3Pool\) -> 68359883632315875514968 \[534 gas\]
 """
 MAINNET_TRACE_FIRST_10_LINES = r"""
 Call trace for
-'0x([A-Fa-f0-9]{64})'
-tx.origin=0x[a-fA-F0-9]{40}
-DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> '' \[\d+ gas\]
+'0xb7d7f1d5ce7743e821d3026647df486f517946ef1342a1ae93c96e4a8016eab7'
+tx\.origin=0x5668EAd1eDB8E2a4d724C8fb9cB5fFEabEB422dc
+DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> "" \[\d+ gas\]
 └── \(delegate\) LoanShifterTaker\.moveLoan\(
       _exchangeData=\[
         0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE,
@@ -75,39 +75,21 @@ DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> '' \[\d+ gas
         0,
 """
 MAINNET_TRACE_LAST_10_LINES = r"""
-    │                       35000000000000000000000000 \[\d+ gas\]
-    ├── DSProxy\.authority\(\) -> DSGuard \[\d+ gas\]
+    │                       35000000000000000000000000 \[1164 gas\]
+    ├── DSProxy\.authority\(\) -> DSGuard \[1291 gas\]
     ├── DSGuard\.forbid\(src=LoanShifterReceiver, dst=DSProxy, sig=0x1c\.\.0000\)
-    │   \[\d+ gas\]
+    │   \[5253 gas\]
     └── DefisaverLogger\.Log\(
           _contract=DSProxy,
           _caller=tx\.origin,
           _logName="LoanShifter",
           _data=0x00\.\.0000
-        \) \[\d+ gas\]"""
+        \)
+"""
 LOCAL_GAS_REPORT = r"""
  +ContractA Gas
 
   Method +Times called +Min. +Max. +Mean +Median
  ─+
   methodWithoutArguments +1 +\d+ +\d+ +\d+ + \d+
-
- +ContractB Gas
-
-  Method +Times called +Min. +Max. +Mean +Median
- ─+
-  methodB1 +3 +\d+ +\d+ +\d+ + \d+
-  callMe +1 +\d+ +\d+ +\d+ + \d+
-  methodB2 +1 +\d+ +\d+ +\d+ + \d+
-  bandPractice +1 +\d+ +\d+ +\d+ + \d+
-
- +ContractC Gas
-
-  Method +Times called +Min. +Max. +Mean +Median
- ─+
-  getSomeList +3 +\d+ +\d+ +\d+ + \d+
-  methodC1 +4 +\d+ +\d+ +\d+ + \d+
-  paperwork +1 +\d+ +\d+ +\d+ + \d+
-  methodC2 +2 +\d+ +\d+ +\d+ + \d+
-  addressToValue +1 +\d+ +\d+ +\d+ + \d+
 """

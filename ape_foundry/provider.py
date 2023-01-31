@@ -24,12 +24,12 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, BlockID, ContractCode, SnapshotID
+from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, SnapshotID
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
-from evm_trace import CallTreeNode, ParityTraceList, get_calltree_from_parity_trace
+from evm_trace import ParityTraceList, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ExtraDataLengthError
@@ -304,7 +304,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
-        result = self._make_request("evm_mine", [{"blocks": num_blocks}])
+        result = self._make_request("evm_mine", [{"blocks": num_blocks, "timestamp": None}])
         if result != "0x0":
             raise ProviderError(f"Failed to mine.\n{result}")
 
@@ -342,7 +342,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 self.set_code(sender, "")
 
             try:
-                tx_params = cast(TxParams, txn.dict())
+                txn_dict = txn.dict()
+                if isinstance(txn_dict.get("type"), int):
+                    txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+
+                tx_params = cast(TxParams, txn_dict)
                 txn_hash = self.web3.eth.send_transaction(tx_params)
                 receipt = self.get_receipt(
                     txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
@@ -353,7 +357,50 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if original_code:
                     self.set_code(sender, original_code.hex())
         else:
-            receipt = super().send_transaction(txn)
+            try:
+                txn_hash = self.web3.eth.send_raw_transaction(txn.serialize_transaction())
+            except ValueError as err:
+                vm_err = self.get_virtual_machine_error(err, txn=txn)
+
+                if "nonce too low" in str(vm_err):
+                    # Add additional nonce information
+                    new_err_msg = f"Nonce '{txn.nonce}' is too low"
+                    raise VirtualMachineError(
+                        new_err_msg, base_err=vm_err.base_err, code=vm_err.code
+                    )
+
+                vm_err.txn = txn
+                raise vm_err from err
+
+            receipt = self.get_receipt(
+                txn_hash.hex(),
+                required_confirmations=(
+                    txn.required_confirmations
+                    if txn.required_confirmations is not None
+                    else self.network.required_confirmations
+                ),
+            )
+
+            if receipt.failed:
+                txn_dict = receipt.transaction.dict()
+                if isinstance(txn_dict.get("type"), int):
+                    txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+
+                txn_params = cast(TxParams, txn_dict)
+
+                # Replay txn to get revert reason
+                try:
+                    self.web3.eth.call(txn_params)
+                except Exception as err:
+                    vm_err = self.get_virtual_machine_error(err, txn=txn)
+                    vm_err.txn = txn
+                    raise vm_err from err
+
+            logger.info(
+                f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})"
+            )
+            self.chain_manager.history.append(receipt)
+            return receipt
 
         return receipt
 
@@ -374,17 +421,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not trace_list:
             raise ProviderError(f"No trace found for transaction '{txn_hash}'")
 
-        return get_calltree_from_parity_trace(trace_list)
+        evm_call = get_calltree_from_parity_trace(trace_list)
+        return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
 
-    def get_virtual_machine_error(self, exception: Exception) -> VirtualMachineError:
+    def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
+        txn = kwargs.get("txn")
         if not len(exception.args):
-            return VirtualMachineError(base_err=exception)
+            return VirtualMachineError(base_err=exception, txn=txn)
 
         err_data = exception.args[0]
         message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
 
         if not message:
-            return VirtualMachineError(base_err=exception)
+            return VirtualMachineError(base_err=exception, txn=txn)
 
         # Handle `ContactLogicError` similarly to other providers in `ape`.
         # by stripping off the unnecessary prefix that foundry has on reverts.
@@ -393,21 +442,21 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            return ContractLogicError(revert_message=message)
+            return ContractLogicError(revert_message=message, txn=txn)
 
         elif (
             "Transaction reverted without a reason string" in message
             or message.lower() == "execution reverted"
         ):
-            return ContractLogicError()
+            return ContractLogicError(txn=txn)
 
         elif message == "Transaction ran out of gas":
-            return OutOfGasError()  # type: ignore
+            return OutOfGasError(txn=txn)
 
         elif message.startswith("execution reverted: "):
-            raise ContractLogicError(message.replace("execution reverted: ", "").strip())
+            raise ContractLogicError(message.replace("execution reverted: ", "").strip(), txn=txn)
 
-        return VirtualMachineError(message=message)
+        return VirtualMachineError(message, txn=txn)
 
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
@@ -429,6 +478,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         # Override from Web3Provider because foundry is pickier.
 
         txn_dict = copy(arguments[0])
+        if isinstance(txn_dict.get("type"), int):
+            txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+
         txn_dict.pop("chainId", None)
         arguments[0] = txn_dict
 

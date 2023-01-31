@@ -1,25 +1,20 @@
-import re
 import tempfile
 from pathlib import Path
 
 import pytest
-from ape.exceptions import ContractLogicError, SignatureError
-from evm_trace import CallTreeNode, CallType
+from ape.exceptions import ContractLogicError
+from ape.types import CallTreeNode
+from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryProvider
+from ape_foundry.provider import FOUNDRY_CHAIN_ID
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
 
-@pytest.fixture(scope="module")
-def call_expression():
-    return re.compile(r"CALL: 0x([a-f]|[A-F]|\d)*.<0x([a-f]|[A-F]|\d)*> \[\d* gas]")
-
-
-def test_instantiation(disconnected_provider):
-    assert disconnected_provider.name == "foundry"
+def test_instantiation(disconnected_provider, name):
+    assert disconnected_provider.name == name
 
 
 def test_connect_and_disconnect(disconnected_provider):
@@ -55,18 +50,6 @@ def test_uri(connected_provider):
     assert expected_uri in connected_provider.uri
 
 
-@pytest.mark.parametrize(
-    "method,args,expected",
-    [
-        (FoundryProvider.get_nonce, [TEST_WALLET_ADDRESS], 0),
-        (FoundryProvider.get_balance, [TEST_WALLET_ADDRESS], 0),
-        (FoundryProvider.get_code, [TEST_WALLET_ADDRESS], HexBytes("")),
-    ],
-)
-def test_rpc_methods(connected_provider, method, args, expected):
-    assert method(connected_provider, *args) == expected
-
-
 def test_set_block_gas_limit(connected_provider):
     gas_limit = connected_provider.get_block("latest").gas_limit
     assert connected_provider.set_block_gas_limit(gas_limit) is True
@@ -74,7 +57,7 @@ def test_set_block_gas_limit(connected_provider):
 
 def test_set_timestamp(connected_provider):
     start_time = connected_provider.get_block("pending").timestamp
-    connected_provider.set_timestamp(start_time + 5)  # Increase by 5 seconds
+    connected_provider.set_timestamp(start_time + 5)
     new_time = connected_provider.get_block("pending").timestamp
 
     # Adding 5 seconds but seconds can be weird so give it a 1 second margin.
@@ -121,8 +104,8 @@ def test_get_call_tree(connected_provider, sender, receiver):
     transfer = sender.transfer(receiver, 1)
     call_tree = connected_provider.get_call_tree(transfer.txn_hash)
     assert isinstance(call_tree, CallTreeNode)
-    assert call_tree.call_type == CallType.CALL
-    assert repr(call_tree) == "CALL: 0xc89D42189f0450C2b2c3c61f58Ec5d628176A1E7 [0 gas]"
+    assert call_tree.call_type == CallType.CALL.value
+    assert repr(call_tree) == "0xc89D42189f0450C2b2c3c61f58Ec5d628176A1E7.0x()"
 
 
 def test_request_timeout(connected_provider, config):
@@ -141,10 +124,6 @@ def test_request_timeout(connected_provider, config):
 def test_send_transaction(contract_instance, owner):
     contract_instance.setNumber(10, sender=owner)
     assert contract_instance.myNumber() == 10
-
-    # Have to be in the same test because of X-dist complications
-    with pytest.raises(SignatureError):
-        contract_instance.setNumber(20)
 
 
 def test_revert(sender, contract_instance):

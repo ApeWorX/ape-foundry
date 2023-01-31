@@ -1,6 +1,3 @@
-*.swp
-.DS_Store
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -128,3 +125,7 @@ node_modules/
 
 # Ape stuff
 .build/
+
+**/.DS_Store
+*.swp
+*.swo

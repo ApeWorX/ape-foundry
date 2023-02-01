@@ -357,50 +357,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if original_code:
                     self.set_code(sender, original_code.hex())
         else:
-            try:
-                txn_hash = self.web3.eth.send_raw_transaction(txn.serialize_transaction())
-            except ValueError as err:
-                vm_err = self.get_virtual_machine_error(err, txn=txn)
-
-                if "nonce too low" in str(vm_err):
-                    # Add additional nonce information
-                    new_err_msg = f"Nonce '{txn.nonce}' is too low"
-                    raise VirtualMachineError(
-                        new_err_msg, base_err=vm_err.base_err, code=vm_err.code
-                    )
-
-                vm_err.txn = txn
-                raise vm_err from err
-
-            receipt = self.get_receipt(
-                txn_hash.hex(),
-                required_confirmations=(
-                    txn.required_confirmations
-                    if txn.required_confirmations is not None
-                    else self.network.required_confirmations
-                ),
-            )
-
-            if receipt.failed:
-                txn_dict = receipt.transaction.dict()
-                if isinstance(txn_dict.get("type"), int):
-                    txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
-
-                txn_params = cast(TxParams, txn_dict)
-
-                # Replay txn to get revert reason
-                try:
-                    self.web3.eth.call(txn_params)
-                except Exception as err:
-                    vm_err = self.get_virtual_machine_error(err, txn=txn)
-                    vm_err.txn = txn
-                    raise vm_err from err
-
-            logger.info(
-                f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})"
-            )
-            self.chain_manager.history.append(receipt)
-            return receipt
+            receipt = super().send_transaction(txn)
 
         return receipt
 

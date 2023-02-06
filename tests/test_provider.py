@@ -141,8 +141,10 @@ def test_contract_revert_no_message(owner, contract_instance):
 def test_transaction_contract_as_sender(contract_instance, connected_provider):
     # Set balance so test wouldn't normally fail from lack of funds
     connected_provider.set_balance(contract_instance.address, "1000 ETH")
-    receipt = contract_instance.setNumber(10, sender=contract_instance)
-    assert receipt
+
+    with pytest.raises(ContractLogicError, match="!authorized"):
+        # Task failed successfully
+        contract_instance.setNumber(10, sender=contract_instance)
 
 
 @pytest.mark.parametrize(

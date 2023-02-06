@@ -17,6 +17,7 @@ from ape.api import (
     Web3Provider,
 )
 from ape.exceptions import (
+    APINotImplementedError,
     ContractLogicError,
     OutOfGasError,
     ProviderError,
@@ -623,4 +624,12 @@ class FoundryForkProvider(FoundryProvider):
         if block_number is not None:
             forking_params["blockNumber"] = block_number
 
-        return self._make_request("anvil_reset", [{"forking": forking_params}])
+        result = self._make_request("anvil_reset", [{"forking": forking_params}])
+
+        try:
+            # reset next block base fee to that of new chain head if can
+            self._make_request("anvil_setNextBlockBaseFeePerGas", [self.base_fee])
+        except APINotImplementedError:
+            pass
+
+        return result

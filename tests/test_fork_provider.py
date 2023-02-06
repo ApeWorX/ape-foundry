@@ -141,7 +141,8 @@ def test_transaction_contract_as_sender(
 ):
     # Set balance so test wouldn't normally fail from lack of funds
     mainnet_fork_provider.set_balance(mainnet_fork_contract_instance.address, "1000 ETH")
-    mainnet_fork_contract_instance.setNumber(10, sender=mainnet_fork_contract_instance)
+    with pytest.raises(ContractLogicError, match="!authorized"):
+        mainnet_fork_contract_instance.setNumber(10, sender=mainnet_fork_contract_instance)
 
 
 @pytest.mark.fork

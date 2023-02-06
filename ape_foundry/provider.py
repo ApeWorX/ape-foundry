@@ -21,11 +21,11 @@ from ape.exceptions import (
     OutOfGasError,
     ProviderError,
     SubprocessError,
-    VirtualMachineError, TransactionError,
+    VirtualMachineError,
 )
 from ape.logging import logger
 from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, SnapshotID
-from ape.utils import cached_property, gas_estimation_error_message
+from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
@@ -281,29 +281,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
         ]
 
-
     def estimate_gas_cost(self, txn: TransactionAPI, **kwargs) -> int:
-        """
-        Estimate the cost of gas for a transaction.
-
-        Args:
-            txn (:class:`~ape.api.transactions.TransactionAPI`):
-                The transaction to estimate the gas for.
-            kwargs:
-                * ``block_identifier`` (:class:`~ape.types.BlockID`): The block ID
-                  to use when estimating the transaction. Useful for
-                  checking a past estimation cost of a transaction.
-                * ``state_overrides`` (Dict): Modify the state of the blockchain
-                  prior to estimation.
-
-        Returns:
-            int: The estimated cost of gas to execute the transaction
-            reported in the fee-currency's smallest unit, e.g. Wei. If the
-            provider's network has been configured with a gas limit override, it
-            will be returned. If the gas limit configuration is "max" this will
-            return the block maximum gas limit.
-        """
-
         txn_dict = txn.dict()
 
         # Anvil is unable to handle integer-based type.
@@ -311,27 +289,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if isinstance(txn_dict.get("type"), int):
             txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
-        # NOTE: "auto" means to enter this method, so remove it from dict
-        if "gas" in txn_dict and txn_dict["gas"] == "auto":
-            txn_dict.pop("gas")
-            # Also pop these, they are overridden by "auto"
-            txn_dict.pop("maxFeePerGas", None)
-            txn_dict.pop("maxPriorityFeePerGas", None)
-
-        try:
-            block_id = kwargs.pop("block_identifier", None)
-            txn_params = cast(TxParams, txn_dict)
-            return self.web3.eth.estimate_gas(txn_params, block_identifier=block_id)
-        except ValueError as err:
-            tx_error = self.get_virtual_machine_error(err, txn=txn)
-
-            # If this is the cause of a would-be revert,
-            # raise ContractLogicError so that we can confirm tx-reverts.
-            if isinstance(tx_error, ContractLogicError):
-                raise tx_error from err
-
-            message = gas_estimation_error_message(tx_error)
-            raise TransactionError(message, base_err=tx_error, txn=txn) from err
+        modified_txn = txn.__class__.construct(**txn_dict)
+        return super().estimate_gas_cost(modified_txn)
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)
@@ -400,9 +359,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
                 tx_params = cast(TxParams, txn_dict)
                 txn_hash = self.web3.eth.send_transaction(tx_params)
-                receipt = self.get_receipt(
-                    txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
-                )
+
             except ValueError as err:
                 raise self.get_virtual_machine_error(err) from err
             finally:
@@ -424,36 +381,32 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 vm_err.txn = txn
                 raise vm_err from err
 
-            receipt = self.get_receipt(
-                txn_hash.hex(),
-                required_confirmations=(
-                    txn.required_confirmations
-                    if txn.required_confirmations is not None
-                    else self.network.required_confirmations
-                ),
-            )
+        receipt = self.get_receipt(
+            txn_hash.hex(),
+            required_confirmations=(
+                txn.required_confirmations
+                if txn.required_confirmations is not None
+                else self.network.required_confirmations
+            ),
+        )
 
-            if receipt.failed:
-                txn_dict = receipt.transaction.dict()
-                if isinstance(txn_dict.get("type"), int):
-                    txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+        if receipt.failed:
+            txn_dict = receipt.transaction.dict()
+            if isinstance(txn_dict.get("type"), int):
+                txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
-                txn_params = cast(TxParams, txn_dict)
+            txn_params = cast(TxParams, txn_dict)
 
-                # Replay txn to get revert reason
-                try:
-                    self.web3.eth.call(txn_params)
-                except Exception as err:
-                    vm_err = self.get_virtual_machine_error(err, txn=txn)
-                    vm_err.txn = txn
-                    raise vm_err from err
+            # Replay txn to get revert reason
+            try:
+                self.web3.eth.call(txn_params)
+            except Exception as err:
+                vm_err = self.get_virtual_machine_error(err, txn=txn)
+                vm_err.txn = txn
+                raise vm_err from err
 
-            logger.info(
-                f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})"
-            )
-            self.chain_manager.history.append(receipt)
-            return receipt
-
+        logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
+        self.chain_manager.history.append(receipt)
         return receipt
 
     def get_balance(self, address: str) -> int:

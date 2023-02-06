@@ -5,7 +5,7 @@ Foundry network provider plugin for Ape. Foundry is a development framework writ
 ## Dependencies
 
 - [python3](https://www.python.org/downloads) version 3.8 or greater, python3-dev
-- Foundry. See Foundry's [Installation](https://github.com/foundry-rs/foundry#installation%3E) documentation for steps.
+- Foundry. See Foundry's [Installation](https://github.com/foundry-rs/foundry#installation) documentation for steps.
 
 ## Installation
 

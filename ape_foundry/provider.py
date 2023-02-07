@@ -281,6 +281,17 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
         ]
 
+    def estimate_gas_cost(self, txn: TransactionAPI, **kwargs) -> int:
+        txn_dict = txn.dict()
+
+        # Anvil is unable to handle integer-based type.
+        # https://github.com/foundry-rs/foundry/issues/4240
+        if isinstance(txn_dict.get("type"), int):
+            txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+
+        modified_txn = txn.__class__.construct(**txn_dict)
+        return super().estimate_gas_cost(modified_txn)
+
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)
         _is_hex = False if not is_str else is_0x_prefixed(str(amount))
@@ -348,9 +359,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
                 tx_params = cast(TxParams, txn_dict)
                 txn_hash = self.web3.eth.send_transaction(tx_params)
-                receipt = self.get_receipt(
-                    txn_hash.hex(), required_confirmations=txn.required_confirmations or 0
-                )
+
             except ValueError as err:
                 raise self.get_virtual_machine_error(err) from err
             finally:
@@ -372,36 +381,32 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 vm_err.txn = txn
                 raise vm_err from err
 
-            receipt = self.get_receipt(
-                txn_hash.hex(),
-                required_confirmations=(
-                    txn.required_confirmations
-                    if txn.required_confirmations is not None
-                    else self.network.required_confirmations
-                ),
-            )
+        receipt = self.get_receipt(
+            txn_hash.hex(),
+            required_confirmations=(
+                txn.required_confirmations
+                if txn.required_confirmations is not None
+                else self.network.required_confirmations
+            ),
+        )
 
-            if receipt.failed:
-                txn_dict = receipt.transaction.dict()
-                if isinstance(txn_dict.get("type"), int):
-                    txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+        if receipt.failed:
+            txn_dict = receipt.transaction.dict()
+            if isinstance(txn_dict.get("type"), int):
+                txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
-                txn_params = cast(TxParams, txn_dict)
+            txn_params = cast(TxParams, txn_dict)
 
-                # Replay txn to get revert reason
-                try:
-                    self.web3.eth.call(txn_params)
-                except Exception as err:
-                    vm_err = self.get_virtual_machine_error(err, txn=txn)
-                    vm_err.txn = txn
-                    raise vm_err from err
+            # Replay txn to get revert reason
+            try:
+                self.web3.eth.call(txn_params)
+            except Exception as err:
+                vm_err = self.get_virtual_machine_error(err, txn=txn)
+                vm_err.txn = txn
+                raise vm_err from err
 
-            logger.info(
-                f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})"
-            )
-            self.chain_manager.history.append(receipt)
-            return receipt
-
+        logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
+        self.chain_manager.history.append(receipt)
         return receipt
 
     def get_balance(self, address: str) -> int:

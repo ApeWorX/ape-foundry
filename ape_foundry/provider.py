@@ -632,9 +632,13 @@ class FoundryForkProvider(FoundryProvider):
         result = self._make_request("anvil_reset", [{"forking": forking_params}])
 
         try:
-            # reset next block base fee to that of new chain head if can
-            self._make_request("anvil_setNextBlockBaseFeePerGas", [self.base_fee])
+            base_fee = self.base_fee
         except APINotImplementedError:
+            base_fee = None
             logger.warning("base_fee not found in block - base fee may not be reset.")
+
+        # reset next block base fee to that of new chain head if can
+        if base_fee is not None:
+            self._make_request("anvil_setNextBlockBaseFeePerGas", [base_fee])
 
         return result

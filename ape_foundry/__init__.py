@@ -30,6 +30,10 @@ def providers():
 
     yield "fantom", LOCAL_NETWORK_NAME, FoundryProvider
     yield "fantom", "opera-fork", FoundryForkProvider
+    yield "optimism", LOCAL_NETWORK_NAME, FoundryProvider
+    yield "optimism", "mainnet-fork", FoundryForkProvider
+    yield "arbitrum", LOCAL_NETWORK_NAME, FoundryProvider
+    yield "arbitrum", "mainnet-fork", FoundryForkProvider
 
 
 __all__ = [

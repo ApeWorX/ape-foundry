@@ -4,7 +4,7 @@ from bisect import bisect_right
 from copy import copy
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union, cast
 
 from ape.api import (
     BlockAPI,
@@ -30,7 +30,9 @@ from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
-from evm_trace import ParityTraceList, get_calltree_from_parity_trace
+from evm_trace import CallType, ParityTraceList
+from evm_trace import TraceFrame as EvmTraceFrame
+from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ExtraDataLengthError
@@ -409,6 +411,67 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
         self.chain_manager.history.append(receipt)
         return receipt
+
+    def send_call(self, txn: TransactionAPI, **kwargs: Any) -> bytes:
+        skip_trace = kwargs.pop("skip_trace", False)
+        arguments = self._prepare_call(txn, **kwargs)
+
+        if skip_trace:
+            return self._eth_call(arguments)
+
+        show_gas = kwargs.pop("show_gas_report", False)
+        show_trace = kwargs.pop("show_trace", False)
+        track_gas = self.chain_manager._reports.track_gas
+        needs_trace = show_gas or show_trace or track_gas
+        if not needs_trace:
+            return self._eth_call(arguments)
+
+        # The user is requesting information related to a call's trace,
+        # such as gas usage data.
+
+        if "type" in arguments[0] and isinstance(arguments[0]["type"], int):
+            arguments[0]["type"] = to_hex(arguments[0]["type"])
+
+        result = self._make_request("debug_traceCall", arguments)
+        trace_data = result.get("structLogs", [])
+        trace_frames = (EvmTraceFrame(**f) for f in trace_data)
+        return_value = HexBytes(result["returnValue"])
+        root_node_kwargs = {
+            "gas_cost": result.get("gas", 0),
+            "address": txn.receiver,
+            "calldata": txn.data,
+            "value": txn.value,
+            "call_type": CallType.CALL,
+            "failed": False,
+            "returndata": return_value,
+        }
+
+        evm_call_tree = get_calltree_from_geth_trace(trace_frames, **root_node_kwargs)
+
+        # NOTE: Don't pass txn_hash here, as it will fail (this is not a real txn).
+        call_tree = self._create_call_tree_node(evm_call_tree)
+
+        receiver = txn.receiver
+        if track_gas and show_gas and not show_trace:
+            # Optimization to enrich early and in_place=True.
+            call_tree.enrich()
+
+        if track_gas and call_tree and receiver is not None:
+            # Gas report being collected, likely for showing a report
+            # at the end of a test run.
+            # Use `in_place=False` in case also `show_trace=True`
+            enriched_call_tree = call_tree.enrich(in_place=False)
+            self.chain_manager._reports.append_gas(enriched_call_tree, receiver)
+
+        if show_gas:
+            enriched_call_tree = call_tree.enrich(in_place=False)
+            self.chain_manager._reports.show_gas(enriched_call_tree)
+
+        if show_trace:
+            call_tree = call_tree.enrich(use_symbol_for_tokens=True)
+            self.chain_manager._reports.show_trace(call_tree)
+
+        return return_value
 
     def get_balance(self, address: str) -> int:
         if hasattr(address, "address"):

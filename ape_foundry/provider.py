@@ -282,7 +282,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             f"{self.number_of_accounts}",
             "--derivation-path",
             "m/44'/60'/0'",
-            "--steps-tracing"
+            "--steps-tracing",
         ]
 
     def estimate_gas_cost(self, txn: TransactionAPI, **kwargs) -> int:

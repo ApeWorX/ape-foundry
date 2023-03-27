@@ -4,7 +4,7 @@ from bisect import bisect_right
 from copy import copy
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, Iterator, List, Literal, Optional, Union, cast
 
 from ape.api import (
     BlockAPI,
@@ -25,7 +25,7 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, SnapshotID
+from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, SnapshotID, TraceFrame
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
@@ -282,6 +282,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             f"{self.number_of_accounts}",
             "--derivation-path",
             "m/44'/60'/0'",
+            "--steps-tracing"
         ]
 
     def estimate_gas_cost(self, txn: TransactionAPI, **kwargs) -> int:
@@ -482,6 +483,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             raise ProviderError(f"Failed to get balance for account '{address}'.")
 
         return int(result, 16) if isinstance(result, str) else result
+
+    def get_transaction_trace(self, txn_hash: str) -> Iterator[TraceFrame]:
+        for trace in self._get_transaction_trace(txn_hash):
+            yield self._create_trace_frame(trace)
+
+    def _get_transaction_trace(self, txn_hash: str) -> Iterator[EvmTraceFrame]:
+        result = self._make_request("debug_traceTransaction", [txn_hash, {"stepsTracing": True}])
+        frames = result.get("structLogs", [])
+        for frame in frames:
+            yield EvmTraceFrame(**frame)
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
         raw_trace_list = self._make_request("trace_transaction", [txn_hash])

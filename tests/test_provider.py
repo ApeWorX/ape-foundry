@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from ape.exceptions import ContractLogicError
-from ape.types import CallTreeNode
+from ape.types import CallTreeNode, TraceFrame
 from evm_trace import CallType
 from hexbytes import HexBytes
 
@@ -98,6 +98,16 @@ def test_unlock_account(connected_provider):
     actual = connected_provider.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
     assert TEST_WALLET_ADDRESS in connected_provider.unlocked_accounts
+
+
+def test_get_transaction_trace(connected_provider, contract_instance, owner):
+    receipt = contract_instance.setNumber(10, sender=owner)
+
+    # Indirectly calls `connected_provider.get_transaction_trace()`
+    frame_data = list(receipt.trace)
+    assert frame_data
+    for frame in frame_data:
+        assert isinstance(frame, TraceFrame)
 
 
 def test_get_call_tree(connected_provider, sender, receiver):

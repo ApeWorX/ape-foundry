@@ -215,12 +215,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         # Verify is actually a Foundry provider,
         # or else skip it to possibly try another port.
-        # TODO: Once we are on web3.py 0.6.0b8 or later, can just use snake_case here.
-        client_version = getattr(
-            self._web3, "client_version", getattr(self._web3, "clientVersion", None)
-        )
-
-        if "anvil" in client_version.lower():
+        client_version = self._web3.client_version.lower()
+        if "anvil" in client_version:
             self._web3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
         else:
             raise ProviderError(

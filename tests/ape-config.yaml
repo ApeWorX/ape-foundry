@@ -6,6 +6,12 @@ ethereum:
   local:
     default_provider: foundry
 
+polygon:
+  local:
+    default_provider: foundry
+  mumbai:
+    default_provider: alchemy
+
 foundry:
   request_timeout: 29
   fork_request_timeout: 360

@@ -11,6 +11,7 @@ extras_require = {
         "pytest-cov",  # Coverage analyzer plugin
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
         "ape-alchemy",  # For running fork tests
+        "ape-polygon",  # For running polygon fork tests
     ],
     "lint": [
         "black>=22.12.0",  # auto-formatter and linter

@@ -227,16 +227,20 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def _set_poa_middleware(self):
         try:
-            block = self.web3.eth.get_block(0)
+            first_block = self.web3.eth.get_block(0)
+            last_block = self.web3.eth.get_block("latest")
         except ExtraDataLengthError:
-            began_poa = True
+            is_poa = True
         else:
-            began_poa = (
-                "proofOfAuthorityData" in block
-                or len(block.get("extraData", "")) > MAX_EXTRADATA_LENGTH
-            )
+            for block in (first_block, last_block):
+                is_poa = (
+                    "proofOfAuthorityData" in block
+                    or len(block.get("extraData", "")) > MAX_EXTRADATA_LENGTH
+                )
+                if is_poa:
+                    break
 
-        if began_poa:
+        if is_poa:
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):

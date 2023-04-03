@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from ape.api.networks import LOCAL_NETWORK_NAME
+from ape.contracts import ContractInstance
 from ape.exceptions import ContractLogicError
 from ape_ethereum.ecosystem import NETWORKS
 
@@ -162,3 +163,13 @@ def test_get_receipt(mainnet_fork_provider, mainnet_fork_contract_instance, owne
     assert receipt.txn_hash == actual.txn_hash
     assert actual.receiver == mainnet_fork_contract_instance.address
     assert actual.sender == receipt.sender
+
+
+@pytest.mark.fork
+def test_connect_to_polygon(networks, owner, contract_container):
+    """
+    Ensures we don't get PoA middleware issue.
+    """
+    with networks.polygon.mumbai_fork.use_provider("foundry"):
+        contract = owner.deploy(contract_container)
+        assert isinstance(contract, ContractInstance)  # Didn't fail

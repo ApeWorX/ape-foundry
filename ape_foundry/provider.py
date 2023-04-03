@@ -223,24 +223,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 f"Port '{self.port}' already in use by another process that isn't an Anvil node."
             )
 
-        self._set_poa_middleware()
-
-    def _set_poa_middleware(self):
-        try:
-            first_block = self.web3.eth.get_block(0)
-            last_block = self.web3.eth.get_block("latest")
-        except ExtraDataLengthError:
-            is_poa = True
-        else:
-            for block in (first_block, last_block):
-                is_poa = (
+        def check_poa(block_id) -> bool:
+            try:
+                block = self.web3.eth.get_block(block_id)
+            except ExtraDataLengthError:
+                return True
+            else:
+                return (
                     "proofOfAuthorityData" in block
                     or len(block.get("extraData", "")) > MAX_EXTRADATA_LENGTH
                 )
-                if is_poa:
-                    break
 
-        if is_poa:
+        # Handle if using PoA
+        if any(map(check_poa, (0, "latest"))):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):

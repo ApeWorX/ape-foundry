@@ -8,7 +8,7 @@ ethereum:
 
 polygon:
   local:
-    default_provider: hardhat
+    default_provider: foundry
   mumbai:
     default_provider: alchemy
 

@@ -234,7 +234,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     or len(block.get("extraData", "")) > MAX_EXTRADATA_LENGTH
                 )
 
-        # Handle if using P
+        # Handle if using PoA
         if any(map(check_poa, (0, "latest"))):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 

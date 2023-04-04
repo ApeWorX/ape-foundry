@@ -531,7 +531,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return OutOfGasError(txn=txn)
 
         elif message.startswith("execution reverted: "):
-            raise ContractLogicError(message.replace("execution reverted: ", "").strip(), txn=txn)
+            return ContractLogicError(message.replace("execution reverted: ", "").strip(), txn=txn)
 
         return VirtualMachineError(message, txn=txn)
 

@@ -4,7 +4,7 @@ from bisect import bisect_right
 from copy import copy
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, Iterator, List, Literal, Optional, Union, cast
+from typing import Any, Dict, Iterator, List, Literal, Optional, Union, cast, Tuple
 
 from ape.api import (
     BlockAPI,
@@ -430,9 +430,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if "type" in arguments[0] and isinstance(arguments[0]["type"], int):
             arguments[0]["type"] = to_hex(arguments[0]["type"])
 
-        result = self._make_request("debug_traceCall", arguments)
-        trace_data = result.get("structLogs", [])
-        trace_frames = (EvmTraceFrame(**f) for f in trace_data)
+        result, trace_frames = self._trace_call(arguments)
         return_value = HexBytes(result["returnValue"])
         root_node_kwargs = {
             "gas_cost": result.get("gas", 0),
@@ -470,6 +468,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self.chain_manager._reports.show_trace(call_tree)
 
         return return_value
+
+    def _trace_call(self, arguments: List[Any]) -> Tuple[Dict, Iterator[EvmTraceFrame]]:
+        result = self._make_request("debug_traceCall", arguments)
+        trace_data = result.get("structLogs", [])
+        return result, (EvmTraceFrame(**f) for f in trace_data)
 
     def get_balance(self, address: str) -> int:
         if hasattr(address, "address"):
@@ -564,7 +567,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         try:
             result = self._make_request("eth_call", arguments)
         except Exception as err:
-            raise self.get_virtual_machine_error(err) from err
+            trace = (self._create_trace_frame(x) for x in self._trace_call(arguments)[1])
+            contract_address = arguments[0]["to"]
+            raise self.get_virtual_machine_error(
+                err, trace=trace, contract_address=contract_address
+            ) from err
 
         return HexBytes(result)
 

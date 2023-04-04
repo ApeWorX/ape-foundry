@@ -3,13 +3,13 @@ from pathlib import Path
 
 import pytest
 from ape.exceptions import ContractLogicError
+from ape.pytest.contextmanagers import RevertsContextManager as reverts
 from ape.types import CallTreeNode, TraceFrame
 from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID
-from ape.pytest.contextmanagers import RevertsContextManager as reverts
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 

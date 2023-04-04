@@ -4,7 +4,7 @@ from bisect import bisect_right
 from copy import copy
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, Iterator, List, Literal, Optional, Union, cast, Tuple
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
 
 from ape.api import (
     BlockAPI,
@@ -505,15 +505,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
-        txn = kwargs.get("txn")
         if not len(exception.args):
-            return VirtualMachineError(base_err=exception, txn=txn)
+            return VirtualMachineError(base_err=exception, **kwargs)
 
         err_data = exception.args[0]
         message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
 
         if not message:
-            return VirtualMachineError(base_err=exception, txn=txn)
+            return VirtualMachineError(base_err=exception, **kwargs)
 
         # Handle `ContactLogicError` similarly to other providers in `ape`.
         # by stripping off the unnecessary prefix that foundry has on reverts.
@@ -522,21 +521,21 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            return ContractLogicError(revert_message=message, txn=txn)
+            return ContractLogicError(revert_message=message, **kwargs)
 
         elif (
             "Transaction reverted without a reason string" in message
             or message.lower() == "execution reverted"
         ):
-            return ContractLogicError(txn=txn)
+            return ContractLogicError(**kwargs)
 
         elif message == "Transaction ran out of gas":
-            return OutOfGasError(txn=txn)
+            return OutOfGasError(**kwargs)
 
         elif message.startswith("execution reverted: "):
-            return ContractLogicError(message.replace("execution reverted: ", "").strip(), txn=txn)
+            return ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
 
-        return VirtualMachineError(message, txn=txn)
+        return VirtualMachineError(message, **kwargs)
 
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True

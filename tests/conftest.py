@@ -20,6 +20,7 @@ from ape_foundry import FoundryProvider
 ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
 
 BASE_CONTRACTS_PATH = Path(__file__).parent / "data" / "contracts"
+LOCAL_CONTRACTS_PATH = BASE_CONTRACTS_PATH / "ethereum" / "local"
 NAME = "foundry"
 
 # Needed to test tracing support in core `ape test` command.
@@ -113,7 +114,7 @@ def networks():
 
 @pytest.fixture(params=("solidity", "vyper"))
 def raw_contract_type(request):
-    path = BASE_CONTRACTS_PATH / "ethereum" / "local" / f"{request.param}_contract.json"
+    path = LOCAL_CONTRACTS_PATH / f"{request.param}_contract.json"
     return path.read_text()
 
 
@@ -130,6 +131,12 @@ def contract_container(contract_type) -> ContractContainer:
 @pytest.fixture
 def contract_instance(owner, contract_container, connected_provider):
     return owner.deploy(contract_container)
+
+
+@pytest.fixture
+def reverts_contract(owner):
+    path = LOCAL_CONTRACTS_PATH / "reverts_contract.json"
+    return owner.deploy(ContractContainer(ContractType.parse_file(path)))
 
 
 @pytest.fixture(scope="session")

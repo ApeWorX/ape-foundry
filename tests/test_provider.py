@@ -9,6 +9,7 @@ from hexbytes import HexBytes
 
 from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID
+from ape.pytest.contextmanagers import RevertsContextManager as reverts
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -140,6 +141,19 @@ def test_revert(sender, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError, match="!authorized"):
         contract_instance.setNumber(6, sender=sender)
+
+
+def test_revert_dev_string_check(sender, reverts_contract):
+    with reverts(dev_message="dev: one"):
+        reverts_contract.revertStrings(1, sender=sender)
+
+    with reverts(dev_message="dev: two"):
+        reverts_contract.revertStrings(2, sender=sender)
+
+
+def test_revert_dev_string_check_call(sender, reverts_contract):
+    with reverts(dev_message="dev: one"):
+        reverts_contract.revertStringsCall(1)
 
 
 def test_contract_revert_no_message(owner, contract_instance):

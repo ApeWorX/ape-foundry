@@ -521,19 +521,22 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            return ContractLogicError(revert_message=message, **kwargs)
+            err = ContractLogicError(revert_message=message, **kwargs)
+            return self.compiler_manager.enrich_error(err)
 
         elif (
             "Transaction reverted without a reason string" in message
             or message.lower() == "execution reverted"
         ):
-            return ContractLogicError(**kwargs)
+            err = ContractLogicError(**kwargs)
+            return self.compiler_manager.enrich_error(err)
 
         elif message == "Transaction ran out of gas":
             return OutOfGasError(**kwargs)
 
         elif message.startswith("execution reverted: "):
-            return ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
+            err = ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
+            return self.compiler_manager.enrich_error(err)
 
         return VirtualMachineError(message, **kwargs)
 

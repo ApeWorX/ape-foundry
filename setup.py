@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os.path
 
 from setuptools import find_packages, setup
 
@@ -14,20 +13,20 @@ extras_require = {
         "ape-polygon",  # For running polygon fork tests
     ],
     "lint": [
-        "black>=22.12.0",  # auto-formatter and linter
-        "mypy>=0.991",  # Static type analyzer
+        "black>=23.3.0,<24",  # auto-formatter and linter
+        "mypy>=0.991,<1",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
         "types-PyYAML",  # Needed due to mypy typeshed
-        "flake8>=5.0.4",  # Style linter
-        "isort>=5.10.1",  # Import sorting linter
+        "flake8>=6.0.0,<7",  # Style linter
+        "isort>=5.10.1,<6",  # Import sorting linter
         "mdformat>=0.7.16",  # Auto-formatter for markdown
         "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
         "mdformat-frontmatter>=0.4.1",  # Needed for frontmatters-style headers in issue templates
     ],
     "doc": [
-        "Sphinx>=3.4.3,<4",  # Documentation generator
-        "sphinx_rtd_theme>=0.1.9,<1",  # Readthedocs.org theme
+        "Sphinx>=6.1.3,<7",  # Documentation generator
+        "sphinx_rtd_theme>=1.2.0,<2",  # Readthedocs.org theme
         "towncrier>=19.2.0, <20",  # Generate release notes
     ],
     "release": [  # `release` GitHub Action job uses this
@@ -53,11 +52,8 @@ extras_require["dev"] = (
     + extras_require["dev"]
 )
 
-readme_path, readme_content_type = "./README.md", "text/x-rst"
-if os.path.exists("./README.md"):
-    readme_path, readme_content_type = "./README.md", "text/markdown"
 
-with open(readme_path) as readme:
+with open("./README.md") as readme:
     long_description = readme.read()
 
 
@@ -67,7 +63,7 @@ setup(
     setup_requires=["setuptools_scm"],
     description="""ape-foundry: Ape network provider for Foundry""",
     long_description=long_description,
-    long_description_content_type=readme_content_type,
+    long_description_content_type="text/markdown",
     author="ApeWorX Ltd.",
     author_email="admin@apeworx.io",
     url="https://github.com/ApeWorX/ape-foundry",

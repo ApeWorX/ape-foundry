@@ -2,9 +2,10 @@ import random
 import shutil
 from bisect import bisect_right
 from copy import copy
+from itertools import tee
 from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, Iterator, List, Literal, Optional, Union, cast
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
 
 from ape.api import (
     BlockAPI,
@@ -35,6 +36,7 @@ from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
+from web3.exceptions import ContractLogicError as Web3ContractLogicError
 from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -430,9 +432,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if "type" in arguments[0] and isinstance(arguments[0]["type"], int):
             arguments[0]["type"] = to_hex(arguments[0]["type"])
 
-        result = self._make_request("debug_traceCall", arguments)
-        trace_data = result.get("structLogs", [])
-        trace_frames = (EvmTraceFrame(**f) for f in trace_data)
+        result, trace_frames = self._trace_call(arguments)
         return_value = HexBytes(result["returnValue"])
         root_node_kwargs = {
             "gas_cost": result.get("gas", 0),
@@ -471,6 +471,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return return_value
 
+    def _trace_call(self, arguments: List[Any]) -> Tuple[Dict, Iterator[EvmTraceFrame]]:
+        result = self._make_request("debug_traceCall", arguments)
+        trace_data = result.get("structLogs", [])
+        return result, (EvmTraceFrame(**f) for f in trace_data)
+
     def get_balance(self, address: str) -> int:
         if hasattr(address, "address"):
             address = address.address
@@ -486,7 +491,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             yield self._create_trace_frame(trace)
 
     def _get_transaction_trace(self, txn_hash: str) -> Iterator[EvmTraceFrame]:
-        result = self._make_request("debug_traceTransaction", [txn_hash, {"stepsTracing": True}])
+        result = self._make_request(
+            "debug_traceTransaction", [txn_hash, {"stepsTracing": True, "enableMemory": True}]
+        )
         frames = result.get("structLogs", [])
         for frame in frames:
             yield EvmTraceFrame(**frame)
@@ -502,15 +509,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
-        txn = kwargs.get("txn")
         if not len(exception.args):
-            return VirtualMachineError(base_err=exception, txn=txn)
+            return VirtualMachineError(base_err=exception, **kwargs)
 
         err_data = exception.args[0]
         message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
 
         if not message:
-            return VirtualMachineError(base_err=exception, txn=txn)
+            return VirtualMachineError(base_err=exception, **kwargs)
 
         # Handle `ContactLogicError` similarly to other providers in `ape`.
         # by stripping off the unnecessary prefix that foundry has on reverts.
@@ -519,21 +525,45 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            return ContractLogicError(revert_message=message, txn=txn)
+            err = ContractLogicError(revert_message=message, **kwargs)
+            return self.compiler_manager.enrich_error(err)
 
-        elif (
-            "Transaction reverted without a reason string" in message
-            or message.lower() == "execution reverted"
-        ):
-            return ContractLogicError(txn=txn)
+        elif "Transaction reverted without a reason string" in message:
+            err = ContractLogicError(**kwargs)
+            return self.compiler_manager.enrich_error(err)
+
+        elif message.lower() == "execution reverted":
+            err = ContractLogicError(**kwargs)
+
+            if isinstance(exception, Web3ContractLogicError):
+                # Check for custom error.
+                data = {}
+                if "trace" in kwargs:
+                    kwargs["trace"], new_trace = tee(kwargs["trace"])
+                    data = list(new_trace)[-1].raw
+
+                elif "txn" in kwargs:
+                    try:
+                        txn_hash = kwargs["txn"].txn_hash.hex()
+                        data = list(self.get_transaction_trace(txn_hash))[-1].raw
+                    except Exception:
+                        pass
+
+                if data.get("op") == "REVERT":
+                    custom_err = "".join([x[2:] for x in data["memory"][4:]])
+                    if custom_err:
+                        err.message = f"0x{custom_err}"
+
+            return self.compiler_manager.enrich_error(err)
 
         elif message == "Transaction ran out of gas":
-            return OutOfGasError(txn=txn)
+            return OutOfGasError(**kwargs)
 
         elif message.startswith("execution reverted: "):
-            return ContractLogicError(message.replace("execution reverted: ", "").strip(), txn=txn)
+            err = ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
+            return self.compiler_manager.enrich_error(err)
 
-        return VirtualMachineError(message, txn=txn)
+        return VirtualMachineError(message, **kwargs)
 
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
@@ -564,7 +594,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         try:
             result = self._make_request("eth_call", arguments)
         except Exception as err:
-            raise self.get_virtual_machine_error(err) from err
+            trace = (self._create_trace_frame(x) for x in self._trace_call(arguments)[1])
+            contract_address = arguments[0]["to"]
+            raise self.get_virtual_machine_error(
+                err, trace=trace, contract_address=contract_address
+            ) from err
 
         return HexBytes(result)
 

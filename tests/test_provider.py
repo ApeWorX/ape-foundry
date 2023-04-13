@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 from ape.exceptions import ContractLogicError
+from ape.pytest.contextmanagers import RevertsContextManager as reverts
 from ape.types import CallTreeNode, TraceFrame
 from evm_trace import CallType
 from hexbytes import HexBytes
@@ -142,6 +143,19 @@ def test_revert(sender, contract_instance):
         contract_instance.setNumber(6, sender=sender)
 
 
+def test_revert_dev_string_check(sender, reverts_contract):
+    with reverts(dev_message="dev: one"):
+        reverts_contract.revertStrings(1, sender=sender)
+
+    with reverts(dev_message="dev: error"):
+        reverts_contract.revertStrings(2, sender=sender)
+
+
+def test_revert_dev_string_check_call(sender, reverts_contract):
+    with reverts(dev_message="dev: one"):
+        reverts_contract.revertStringsCall(1)
+
+
 def test_contract_revert_no_message(owner, contract_instance):
     # The Contract raises empty revert when setting number to 5.
     with pytest.raises(ContractLogicError, match="Transaction failed."):
@@ -190,3 +204,11 @@ def test_get_receipt(connected_provider, contract_instance, owner):
     assert receipt.txn_hash == actual.txn_hash
     assert actual.receiver == contract_instance.address
     assert actual.sender == receipt.sender
+
+
+def test_revert_error(error_contract, not_owner):
+    """
+    Test matching a revert custom Solidity error.
+    """
+    with pytest.raises(error_contract.Unauthorized):
+        error_contract.withdraw(sender=not_owner)

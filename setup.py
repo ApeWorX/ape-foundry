@@ -70,7 +70,7 @@ setup(
     include_package_data=True,
     install_requires=[
         "eth-ape>=0.6.8,<0.7",
-        "evm-trace>=0.1.0a13",
+        "evm-trace",  # Use same version as eth-ape
         "hexbytes",  # Use same version as eth-ape
         "web3",  # Use same version as eth-ape
     ],

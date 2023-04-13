@@ -2,6 +2,7 @@ import random
 import shutil
 from bisect import bisect_right
 from copy import copy
+from itertools import tee
 from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
@@ -35,6 +36,7 @@ from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
+from web3.exceptions import ContractLogicError as Web3ContractLogicError
 from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -489,7 +491,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             yield self._create_trace_frame(trace)
 
     def _get_transaction_trace(self, txn_hash: str) -> Iterator[EvmTraceFrame]:
-        result = self._make_request("debug_traceTransaction", [txn_hash, {"stepsTracing": True}])
+        result = self._make_request(
+            "debug_traceTransaction", [txn_hash, {"stepsTracing": True, "enableMemory": True}]
+        )
         frames = result.get("structLogs", [])
         for frame in frames:
             yield EvmTraceFrame(**frame)
@@ -524,11 +528,32 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             err = ContractLogicError(revert_message=message, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
-        elif (
-            "Transaction reverted without a reason string" in message
-            or message.lower() == "execution reverted"
-        ):
+        elif "Transaction reverted without a reason string" in message:
             err = ContractLogicError(**kwargs)
+            return self.compiler_manager.enrich_error(err)
+
+        elif message.lower() == "execution reverted":
+            err = ContractLogicError(**kwargs)
+
+            if isinstance(exception, Web3ContractLogicError):
+                # Check for custom error.
+                data = {}
+                if "trace" in kwargs:
+                    kwargs["trace"], new_trace = tee(kwargs["trace"])
+                    data = list(new_trace)[-1].raw
+
+                elif "txn" in kwargs:
+                    try:
+                        txn_hash = kwargs["txn"].txn_hash.hex()
+                        data = list(self.get_transaction_trace(txn_hash))[-1].raw
+                    except Exception:
+                        pass
+
+                if data.get("op") == "REVERT":
+                    custom_err = "".join([x[2:] for x in data["memory"][4:]])
+                    if custom_err:
+                        err.message = f"0x{custom_err}"
+
             return self.compiler_manager.enrich_error(err)
 
         elif message == "Transaction ran out of gas":

@@ -147,7 +147,7 @@ def test_revert_dev_string_check(sender, reverts_contract):
     with reverts(dev_message="dev: one"):
         reverts_contract.revertStrings(1, sender=sender)
 
-    with reverts(dev_message="dev: two"):
+    with reverts(dev_message="dev: error"):
         reverts_contract.revertStrings(2, sender=sender)
 
 
@@ -204,3 +204,11 @@ def test_get_receipt(connected_provider, contract_instance, owner):
     assert receipt.txn_hash == actual.txn_hash
     assert actual.receiver == contract_instance.address
     assert actual.sender == receipt.sender
+
+
+def test_revert_error(error_contract, not_owner):
+    """
+    Test matching a revert custom Solidity error.
+    """
+    with pytest.raises(error_contract.Unauthorized):
+        error_contract.withdraw(sender=not_owner)

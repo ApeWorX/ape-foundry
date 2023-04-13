@@ -1,5 +1,6 @@
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import List
 
@@ -28,11 +29,11 @@ BASE_CONTRACTS_PATH = Path(__file__).parent / "data" / "contracts" / "ethereum"
 @pytest.fixture
 def captrace(capsys):
     class CapTrace:
-        def read_trace(self, expected_start: str):
-            lines = capsys.readouterr().out.splitlines()
+        def read_trace(self, expected_start: str, file=None):
+            lines = file.readlines() if file else capsys.readouterr().out.splitlines()
             start_index = 0
             for index, line in enumerate(lines):
-                if line.strip() == expected_start:
+                if line.strip().startswith(expected_start):
                     start_index = index
                     break
 
@@ -79,9 +80,15 @@ def test_local_transaction_traces(local_receipt, captrace):
     # NOTE: Strange bug in Rich where we can't use sys.stdout for testing tree output.
     # And we have to write to a file, close it, and then re-open it to see output.
     def run_test():
-        local_receipt.show_trace()
-        lines = captrace.read_trace("Call trace for")
-        assert_rich_output(lines, LOCAL_TRACE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Use a tempfile to avoid terminal inconsistencies affecting output.
+            file_path = Path(temp_dir) / "temp"
+            with open(file_path, "w") as file:
+                local_receipt.show_trace(file=file)
+
+            with open(file_path, "r") as file:
+                lines = captrace.read_trace("Call trace for", file=file)
+                assert_rich_output(lines, LOCAL_TRACE)
 
     run_test()
 
@@ -91,9 +98,15 @@ def test_local_transaction_traces(local_receipt, captrace):
 
 def test_local_transaction_gas_report(local_receipt, captrace):
     def run_test():
-        local_receipt.show_gas_report()
-        lines = captrace.read_trace("ContractA Gas")
-        assert_rich_output(lines, LOCAL_GAS_REPORT)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = Path(temp_dir) / "temp"
+            with open(temp_file, "w") as file:
+                local_receipt.show_gas_report(file=file)
+
+            with open(temp_file, "r") as file:
+                lines = captrace.read_trace("ContractA Gas", file=file)
+
+            assert_rich_output(lines, LOCAL_GAS_REPORT)
 
     run_test()
 
@@ -103,13 +116,20 @@ def test_local_transaction_gas_report(local_receipt, captrace):
 
 @pytest.mark.manual
 def test_mainnet_transaction_traces(mainnet_receipt, captrace):
-    mainnet_receipt.show_trace()
-    lines = captrace.read_trace("Call trace for")
-    expected_beginning, expected_ending = EXPECTED_MAP[mainnet_receipt.txn_hash]
-    actual_beginning = lines[:10]
-    actual_ending = lines[-10:]
-    assert_rich_output(actual_beginning, expected_beginning)
-    assert_rich_output(actual_ending, expected_ending)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = Path(temp_dir) / "temp"
+
+        with open(temp_file, "w") as file:
+            mainnet_receipt.show_trace(file=file)
+
+        with open(temp_file, "r") as file:
+            lines = captrace.read_trace("Call trace for", file=file)
+
+        expected_beginning, expected_ending = EXPECTED_MAP[mainnet_receipt.txn_hash]
+        actual_beginning = lines[:10]
+        actual_ending = lines[-10:]
+        assert_rich_output(actual_beginning, expected_beginning)
+        assert_rich_output(actual_ending, expected_ending)
 
 
 def assert_rich_output(rich_capture: List[str], expected: str):

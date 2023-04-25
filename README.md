@@ -1,6 +1,7 @@
 # Quick Start
 
-Foundry network provider plugin for Ape. Foundry is a development framework written in Rust for Ethereum that includes a local network implementation.
+Foundry network provider plugin for Ape.
+Foundry is a development framework written in Rust for Ethereum that includes a local network implementation.
 
 ## Dependencies
 
@@ -57,7 +58,8 @@ foundry:
 
 ## Mainnet Fork
 
-The `ape-foundry` plugin also includes a mainnet fork provider. It requires using another provider that has access to mainnet.
+The `ape-foundry` plugin also includes a mainnet fork provider.
+It requires using another provider that has access to mainnet.
 
 Use it in most commands like this:
 
@@ -76,7 +78,8 @@ foundry:
 
 ```
 
-Otherwise, it defaults to the default mainnet provider plugin. You can also specify a `block_number` and `evm_version`.
+Otherwise, it defaults to the default mainnet provider plugin.
+You can also specify a `block_number` and `evm_version`.
 
 If the block number is specified, but no EVM version is specified, it is automatically set based on the block height for known networks.
 

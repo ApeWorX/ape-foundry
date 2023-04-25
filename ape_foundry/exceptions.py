@@ -20,8 +20,5 @@ class FoundryNotInstalledError(FoundrySubprocessError):
 
     def __init__(self):
         super().__init__(
-            "Missing local Foundry node client. "
-            "See ape-foundry README for install steps. "
-            "Note: global installation of Foundry will not work and "
-            "you must be in your project's directory."
+            "Missing local Foundry node client. See ape-foundry README for install steps."
         )

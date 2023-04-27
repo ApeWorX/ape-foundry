@@ -243,7 +243,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     # The user configured a host and the anvil process was already running.
                     logger.info(
                         f"Connecting to existing '{self.process_name}' "
-                        f"at host '{self._clean_host}'."
+                        f"at host '{self._clean_uri}'."
                     )
             else:
                 for _ in range(self.config.process_attempts):

@@ -8,7 +8,6 @@ from ape.types import CallTreeNode, TraceFrame
 from evm_trace import CallType
 from hexbytes import HexBytes
 
-from ape_foundry.exceptions import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
@@ -21,7 +20,7 @@ def test_instantiation(disconnected_provider, name):
 def test_connect_and_disconnect(disconnected_provider):
     # Use custom port to prevent connecting to a port used in another test.
 
-    disconnected_provider.port = 8555
+    disconnected_provider._host = "http://127.0.0.1:8555"
     disconnected_provider.connect()
 
     try:
@@ -40,15 +39,11 @@ def test_gas_price(connected_provider):
 
 
 def test_uri_disconnected(disconnected_provider):
-    with pytest.raises(
-        FoundryProviderError, match=r"Can't build URI before `connect\(\)` is called\."
-    ):
-        _ = disconnected_provider.uri
+    assert disconnected_provider.uri == "http://127.0.0.1:8545"
 
 
 def test_uri(connected_provider):
-    expected_uri = f"http://127.0.0.1:{connected_provider.port}"
-    assert expected_uri in connected_provider.uri
+    assert connected_provider.uri in connected_provider.uri
 
 
 def test_set_block_gas_limit(connected_provider):
@@ -212,3 +207,10 @@ def test_revert_error(error_contract, not_owner):
     """
     with pytest.raises(error_contract.Unauthorized):
         error_contract.withdraw(sender=not_owner)
+
+
+def test_host(temp_config, networks):
+    data = {"foundry": {"host": "https://example.com"}}
+    with temp_config(data):
+        provider = networks.ethereum.local.get_provider("foundry")
+        assert provider.uri == "https://example.com"

@@ -88,3 +88,14 @@ If the block number is specified, but no EVM version is specified, it is automat
 ```bash
 ape plugins install alchemy
 ```
+
+## Remote Anvil Node
+
+To connect to a remote anvil node, set up your config like this:
+
+```yaml
+foundry:
+  host: https://anvil.example.com
+```
+
+Now, instead of launching a local process, it will attempt to connect to the remote anvil node and use this plugin as the ape interface.

@@ -70,11 +70,12 @@ setup(
     include_package_data=True,
     install_requires=[
         "eth-ape>=0.6.8,<0.7",
-        "evm-trace",  # Use same version as eth-ape
-        "hexbytes",  # Use same version as eth-ape
-        "web3",  # Use same version as eth-ape
+        "evm-trace",  # Use same version as ape
+        "hexbytes",  # Use same version as ape
+        "web3",  # Use same version as ape
+        "yarl",  # Use same version as ape
     ],
-    python_requires=">=3.8,<3.11",
+    python_requires=">=3.8,<4",
     extras_require=extras_require,
     py_modules=["ape_foundry"],
     license="Apache-2.0",

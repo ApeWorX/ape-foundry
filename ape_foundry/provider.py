@@ -186,8 +186,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             logger.warning(warning)
             self._host = f"http://127.0.0.1:{self.provider_settings['port']}"
 
+        elif self.config.port != DEFAULT_PORT and self.config.host is not None:
+            raise FoundryProviderError(
+                "Cannot use deprecated `port` field with `host`. "
+                "Place `port` at end of `host` instead."
+            )
+
         elif self.config.port != DEFAULT_PORT:
-            # TODO: Can remove after 0.7.
+            # We only get here if the user configured a port without a host,
+            # the old way of doing it. TODO: Can remove after 0.7.
             logger.warning(warning)
             if self.config.port not in (None, "auto"):
                 self._host = f"http://127.0.0.1:{self.config.port}"

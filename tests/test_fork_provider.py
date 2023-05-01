@@ -20,31 +20,34 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
 def test_multiple_providers(
     name, networks, connected_provider, mainnet_fork_port, goerli_fork_port
 ):
+    default_host = "http://127.0.0.1:8545"
     assert networks.active_provider.name == name
     assert networks.active_provider.network.name == LOCAL_NETWORK_NAME
-    assert networks.active_provider.port == 8545
+    assert networks.active_provider.uri == default_host
+    mainnet_fork_host = f"http://127.0.0.1:{mainnet_fork_port}"
 
     with networks.ethereum.mainnet_fork.use_provider(
-        name, provider_settings={"port": mainnet_fork_port}
+        name, provider_settings={"host": mainnet_fork_host}
     ):
         assert networks.active_provider.name == name
         assert networks.active_provider.network.name == "mainnet-fork"
-        assert networks.active_provider.port == mainnet_fork_port
+        assert networks.active_provider.uri == mainnet_fork_host
+        goerli_fork_host = f"http://127.0.0.1:{goerli_fork_port}"
 
         with networks.ethereum.goerli_fork.use_provider(
-            name, provider_settings={"port": goerli_fork_port}
+            name, provider_settings={"host": goerli_fork_host}
         ):
             assert networks.active_provider.name == name
             assert networks.active_provider.network.name == "goerli-fork"
-            assert networks.active_provider.port == goerli_fork_port
+            assert networks.active_provider.uri == goerli_fork_host
 
         assert networks.active_provider.name == name
         assert networks.active_provider.network.name == "mainnet-fork"
-        assert networks.active_provider.port == mainnet_fork_port
+        assert networks.active_provider.uri == mainnet_fork_host
 
     assert networks.active_provider.name == name
     assert networks.active_provider.network.name == LOCAL_NETWORK_NAME
-    assert networks.active_provider.port == 8545
+    assert networks.active_provider.uri == default_host
 
 
 @pytest.mark.parametrize("network", [k for k in NETWORKS.keys()])
@@ -145,13 +148,20 @@ def test_transaction_contract_as_sender(
     # Set balance so test wouldn't normally fail from lack of funds
     mainnet_fork_provider.set_balance(mainnet_fork_contract_instance.address, "1000 ETH")
     with pytest.raises(ContractLogicError, match="!authorized"):
-        mainnet_fork_contract_instance.setNumber(10, sender=mainnet_fork_contract_instance)
+        # NOTE: For some reason, this only fails when for estimate gas. Otherwise, the status
+        # is non-failing. This wasn't happened prior to Ape 0.6.9 because a bugfix revealed
+        # that the test config was never getting applied and thus we never hit this problem
+        # because it was estimating gas before (even tho should have been using max).
+        mainnet_fork_contract_instance.setNumber(
+            10, sender=mainnet_fork_contract_instance, gas="auto"
+        )
 
 
 @pytest.mark.fork
 def test_transaction_unknown_contract_as_sender(accounts, mainnet_fork_provider):
     account = "0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52"
     multi_sig = accounts[account]
+    multi_sig.balance += accounts.conversion_manager.convert("1000 ETH", int)
     receipt = multi_sig.transfer(accounts[0], "100 gwei")
     assert not receipt.failed
 

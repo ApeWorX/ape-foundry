@@ -203,7 +203,7 @@ def mainnet_fork_port():
 @pytest.fixture
 def mainnet_fork_provider(name, networks, mainnet_fork_port):
     with networks.ethereum.mainnet_fork.use_provider(
-        name, provider_settings={"port": mainnet_fork_port}
+        name, provider_settings={"host": f"http://127.0.0.1:{mainnet_fork_port}"}
     ) as provider:
         yield provider
 
@@ -216,7 +216,7 @@ def goerli_fork_port():
 @pytest.fixture
 def goerli_fork_provider(name, networks, goerli_fork_port):
     with networks.ethereum.goerli_fork.use_provider(
-        name, provider_settings={"port": goerli_fork_port}
+        name, provider_settings={"host": f"http://127.0.0.1:{goerli_fork_port}"}
     ) as provider:
         yield provider
 

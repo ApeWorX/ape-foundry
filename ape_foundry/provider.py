@@ -21,7 +21,6 @@ from ape.exceptions import (
     APINotImplementedError,
     ContractLogicError,
     OutOfGasError,
-    ProviderError,
     SubprocessError,
     VirtualMachineError,
 )
@@ -42,6 +41,7 @@ from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.middleware.validation import MAX_EXTRADATA_LENGTH
 from web3.types import TxParams
+from yarl import URL
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
@@ -61,10 +61,21 @@ class FoundryForkConfig(PluginConfig):
 
 class FoundryNetworkConfig(PluginConfig):
     port: Optional[Union[int, Literal["auto"]]] = DEFAULT_PORT
+    """Deprecated. Use ``host`` config."""
+
+    host: Optional[Union[str, Literal["auto"]]] = None
+    """The host address or ``"auto"`` to use localhost with a random port (with attempts)."""
+
+    manage_process: bool = True
+    """
+    If ``True`` and the host is local and Anvil is not running, will attempt to start.
+    Defaults to ``True``. If ``host`` is remote, will not be able to start.
+    """
 
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
     request_timeout: int = 30
     fork_request_timeout: int = 300
+    process_attempts: int = 0
 
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryForkProvider.
@@ -80,10 +91,11 @@ def _call(*args):
 
 
 class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
-    port: Optional[int] = None
+    _host: Optional[str] = None
     attempted_ports: List[int] = []
     unlocked_accounts: List[AddressType] = []
     cached_chain_id: Optional[int] = None
+    _did_warn_wrong_node = False
 
     @property
     def mnemonic(self) -> str:
@@ -100,6 +112,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @property
     def timeout(self) -> int:
         return self.config.request_timeout
+
+    @property
+    def _clean_uri(self) -> str:
+        return str(URL(self.uri).with_user(None).with_password(None))
+
+    @property
+    def _port(self) -> Optional[int]:
+        return URL(self.uri).port
 
     @property
     def chain_id(self) -> int:
@@ -132,10 +152,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def uri(self) -> str:
-        if not self.port:
-            raise FoundryProviderError("Can't build URI before `connect()` is called.")
+        if self._host is None:
+            self._host = self.config.host or f"http://127.0.0.1:{DEFAULT_PORT}"
 
-        return f"http://127.0.0.1:{self.port}"
+        return self._host
 
     @property
     def priority_fee(self) -> int:
@@ -143,6 +163,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def is_connected(self) -> bool:
+        if self._host in ("auto", None):
+            # Hasn't tried yet.
+            return False
+
         self._set_web3()
         return self._web3 is not None
 
@@ -156,17 +180,42 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         **NOTE**: Must set port before calling 'super().connect()'.
         """
 
-        if not self.port:
-            self.port = self.provider_settings.get("port", self.config.port)
+        warning = "`port` setting is deprecated. Please use `host` key that includes the port."
+        if "port" in self.provider_settings:
+            # TODO: Can remove after 0.7.
+            logger.warning(warning)
+            self._host = f"http://127.0.0.1:{self.provider_settings['port']}"
+
+        elif self.config.port != DEFAULT_PORT and self.config.host is not None:
+            raise FoundryProviderError(
+                "Cannot use deprecated `port` field with `host`. "
+                "Place `port` at end of `host` instead."
+            )
+
+        elif self.config.port != DEFAULT_PORT:
+            # We only get here if the user configured a port without a host,
+            # the old way of doing it. TODO: Can remove after 0.7.
+            logger.warning(warning)
+            if self.config.port not in (None, "auto"):
+                self._host = f"http://127.0.0.1:{self.config.port}"
+            else:
+                # This will trigger selecting a random port on localhost and trying.
+                self._host = "auto"
+
+        elif "host" in self.provider_settings:
+            self._host = self.provider_settings["host"]
+
+        elif self._host is None:
+            self._host = self.config.host or f"http://127.0.0.1:{DEFAULT_PORT}"
 
         if self.is_connected:
             # Connects to already running process
             self._start()
-        else:
+
+        elif self.config.manage_process:
             # Only do base-process setup if not connecting to already-running process
             super().connect()
-
-            if self.port:
+            if self._host:
                 self._set_web3()
                 if not self._web3:
                     # Process attempts to get started at this point.
@@ -186,12 +235,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
                         iterations += 1
                         if iterations == timeout:
-                            raise ProviderError("Timed-out waiting for process to begin listening.")
+                            raise FoundryProviderError(
+                                "Timed-out waiting for process to begin listening."
+                            )
 
                 else:
-                    # The user configured a port and the anvil process was already running.
+                    # The user configured a host and the anvil process was already running.
                     logger.info(
-                        f"Connecting to existing '{self.process_name}' at port '{self.port}'."
+                        f"Connecting to existing '{self.process_name}' "
+                        f"at host '{self._clean_uri}'."
                     )
             else:
                 for _ in range(self.config.process_attempts):
@@ -204,10 +256,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         raise
                     except SubprocessError as exc:
                         logger.info("Retrying anvil subprocess startup: %r", exc)
-                        self.port = None
+                        self._host = None
+        else:
+            raise FoundryProviderError(
+                f"Failed to connect to remote Anvil node at '{self._clean_uri}'."
+            )
 
     def _set_web3(self):
-        if not self.port:
+        if not self._host:
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
@@ -220,10 +276,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         client_version = self._web3.client_version.lower()
         if "anvil" in client_version:
             self._web3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
-        else:
-            raise ProviderError(
-                f"Port '{self.port}' already in use by another process that isn't an Anvil node."
+        elif self._port is not None:
+            raise FoundryProviderError(
+                f"Port '{self._port}' already in use by another process that isn't an Anvil node."
             )
+        else:
+            # Not sure if possible to get here.
+            raise FoundryProviderError("Failed to start Anvil process.")
 
         def check_poa(block_id) -> bool:
             try:
@@ -241,13 +300,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):
-        use_random_port = self.port == "auto"
+        use_random_port = self.uri == "auto"
         if use_random_port:
-            self.port = None
+            self._host = None
 
             if DEFAULT_PORT not in self.attempted_ports and not use_random_port:
-                self.port = DEFAULT_PORT
+                # First, attempt the default port before anything else.
+                self._host = f"127.0.0.1:{DEFAULT_PORT}"
+
             else:
+                # Pick a random port
                 port = random.randint(EPHEMERAL_PORTS_START, EPHEMERAL_PORTS_END)
                 max_attempts = 25
                 attempts = 0
@@ -260,21 +322,28 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                             f"Unable to find an available port. Ports tried: {ports_str}"
                         )
 
-                self.port = port
+                self.attempted_ports.append(port)
+                self._host = f"http://127.0.0.1:{port}"
 
-        self.attempted_ports.append(self.port)
+        elif ":" in self._host and self._port is not None:
+            # Append the one and only port to the attempted ports list, for honest keeping.
+            self.attempted_ports.append(self._port)
+
+        else:
+            self._host = f"http://127.0.0.1:{DEFAULT_PORT}"
+
         self.start()
 
     def disconnect(self):
         self._web3 = None
-        self.port = None
+        self._host = None
         super().disconnect()
 
     def build_command(self) -> List[str]:
         return [
             self.anvil_bin,
             "--port",
-            f"{self.port}",
+            f"{self._port or DEFAULT_PORT}",
             "--mnemonic",
             self.mnemonic,
             "--accounts",
@@ -320,7 +389,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def mine(self, num_blocks: int = 1):
         result = self._make_request("evm_mine", [{"blocks": num_blocks, "timestamp": None}])
         if result != "0x0":
-            raise ProviderError(f"Failed to mine.\n{result}")
+            raise FoundryProviderError(f"Failed to mine.\n{result}")
 
     def snapshot(self) -> str:
         return self._make_request("evm_snapshot", [])
@@ -482,7 +551,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         result = self._make_request("eth_getBalance", [address, "latest"])
         if not result:
-            raise ProviderError(f"Failed to get balance for account '{address}'.")
+            raise FoundryProviderError(f"Failed to get balance for account '{address}'.")
 
         return int(result, 16) if isinstance(result, str) else result
 
@@ -503,7 +572,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         trace_list = ParityTraceList.parse_obj(raw_trace_list)
 
         if not trace_list:
-            raise ProviderError(f"No trace found for transaction '{txn_hash}'")
+            raise FoundryProviderError(f"No trace found for transaction '{txn_hash}'")
 
         evm_call = get_calltree_from_parity_trace(trace_list)
         return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
@@ -692,7 +761,7 @@ class FoundryForkProvider(FoundryProvider):
                 upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
                 upstream_genesis_block_hash = upstream_provider.get_block(0).hash
             else:
-                raise ProviderError(f"Unable to get genesis block: {err}.") from err
+                raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err
 
         upstream_provider.disconnect()
         if self.get_block(0).hash != upstream_genesis_block_hash:
@@ -710,7 +779,7 @@ class FoundryForkProvider(FoundryProvider):
         if not self.fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 
-        if self.fork_url.replace("localhost", "127.0.0.1") == self.uri:
+        if self.fork_url.replace("localhost", "127.0.0.1").replace("http://", "") == self.uri:
             raise FoundryProviderError(
                 "Invalid upstream-fork URL. Can't be same as local anvil node."
             )

@@ -35,6 +35,7 @@ from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
+from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
 from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
@@ -625,6 +626,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         elif message.startswith("execution reverted: "):
             err = ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
+            return self.compiler_manager.enrich_error(err)
+
+        elif isinstance(exception, ContractCustomError):
+            # Is raw hex (custom exception)
+            err = ContractLogicError(message, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
         return VirtualMachineError(message, **kwargs)

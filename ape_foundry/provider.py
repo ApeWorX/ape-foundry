@@ -460,6 +460,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             txn_params = cast(TxParams, txn_dict)
 
             # Replay txn to get revert reason
+            # NOTE: For some reason, `nonce` can't be in the txn params or else it fails.
+            if "nonce" in txn_params:
+                del txn_params["nonce"]
+
             try:
                 self.web3.eth.call(txn_params)
             except Exception as err:

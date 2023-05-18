@@ -90,10 +90,9 @@ def test_snapshot_and_revert(connected_provider):
     assert block_1.hash == block_3.hash
 
 
-def test_unlock_account(connected_provider):
+def test_unlock_account(connected_provider, accounts):
     actual = connected_provider.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
-    assert TEST_WALLET_ADDRESS in connected_provider.unlocked_accounts
 
 
 def test_get_transaction_trace(connected_provider, contract_instance, owner):

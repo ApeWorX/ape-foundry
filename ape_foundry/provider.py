@@ -29,12 +29,13 @@ from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, Snapshot
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
-from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_checksum_address, to_hex
+from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
 from hexbytes import HexBytes
 from web3 import HTTPProvider, Web3
+from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
 from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
@@ -93,9 +94,12 @@ def _call(*args):
 class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     _host: Optional[str] = None
     attempted_ports: List[int] = []
-    unlocked_accounts: List[AddressType] = []
     cached_chain_id: Optional[int] = None
     _did_warn_wrong_node = False
+
+    @property
+    def unlocked_accounts(self) -> List[AddressType]:
+        return list(self.account_manager.test_accounts._impersonated_accounts)
 
     @property
     def mnemonic(self) -> str:
@@ -353,17 +357,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--steps-tracing",
         ]
 
-    def estimate_gas_cost(self, txn: TransactionAPI, **kwargs) -> int:
-        txn_dict = txn.dict()
-
-        # Anvil is unable to handle integer-based type.
-        # https://github.com/foundry-rs/foundry/issues/4240
-        if isinstance(txn_dict.get("type"), int):
-            txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
-
-        modified_txn = txn.__class__.construct(**txn_dict)
-        return super().estimate_gas_cost(modified_txn)
-
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)
         _is_hex = False if not is_str else is_0x_prefixed(str(amount))
@@ -403,7 +396,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def unlock_account(self, address: AddressType) -> bool:
         self._make_request("anvil_impersonateAccount", [address])
-        self.unlocked_accounts.append(address)
         return True
 
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
@@ -417,8 +409,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if sender and sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
-
-            sender = to_checksum_address(sender)  # For mypy
+            sender = cast(AddressType, sender)  # We know it's checksummed at this point.
             txn = self.prepare_transaction(txn)
             original_code = HexBytes(self.get_code(sender))
             if original_code:
@@ -470,6 +461,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             txn_params = cast(TxParams, txn_dict)
 
             # Replay txn to get revert reason
+            # NOTE: For some reason, `nonce` can't be in the txn params or else it fails.
+            if "nonce" in txn_params:
+                del txn_params["nonce"]
+
             try:
                 self.web3.eth.call(txn_params)
             except Exception as err:
@@ -490,7 +485,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         show_gas = kwargs.pop("show_gas_report", False)
         show_trace = kwargs.pop("show_trace", False)
-        track_gas = self.chain_manager._reports.track_gas
+        track_gas = self._test_runner is not None and self._test_runner.gas_tracker.enabled
         needs_trace = show_gas or show_trace or track_gas
         if not needs_trace:
             return self._eth_call(arguments)
@@ -528,7 +523,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # at the end of a test run.
             # Use `in_place=False` in case also `show_trace=True`
             enriched_call_tree = call_tree.enrich(in_place=False)
-            self.chain_manager._reports.append_gas(enriched_call_tree, receiver)
+            if self._test_runner:
+                self._test_runner.gas_tracker.append_gas(enriched_call_tree, receiver)
 
         if show_gas:
             enriched_call_tree = call_tree.enrich(in_place=False)
@@ -630,6 +626,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         elif message.startswith("execution reverted: "):
             err = ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
+            return self.compiler_manager.enrich_error(err)
+
+        elif isinstance(exception, ContractCustomError):
+            # Is raw hex (custom exception)
+            err = ContractLogicError(message, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
         return VirtualMachineError(message, **kwargs)

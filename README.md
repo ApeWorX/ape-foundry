@@ -109,7 +109,7 @@ import pytest
 
 @pytest.fixture
 def whale(accounts):
-    return accounts["example.ens"]
+    return accounts["example.eth"]
 ```
 
 To transact, your impersonated account must have a balance.
@@ -121,7 +121,7 @@ To programtically set an account's balance, do the following:
 ```python
 from ape import accounts
 
-account = accounts["example.ens"]
+account = accounts["example.eth"]
 account.balance = "1000 ETH"  # This calls `anvil_setBalance` under-the-hood.
 ```
 

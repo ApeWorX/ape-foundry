@@ -79,8 +79,8 @@ class FoundryNetworkConfig(PluginConfig):
     process_attempts: int = 0
 
     # RPC defaults
-    base_fee: int = int(10e8)  # 1 gwei
-    priority_fee: int = int(2e9)  # 2 gwei
+    base_fee: int = 0
+    priority_fee: int = 0
 
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryForkProvider.

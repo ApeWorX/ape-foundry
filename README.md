@@ -75,7 +75,6 @@ foundry:
     ethereum:
       mainnet:
         upstream_provider: alchemy
-
 ```
 
 Otherwise, it defaults to the default mainnet provider plugin.
@@ -99,3 +98,39 @@ foundry:
 ```
 
 Now, instead of launching a local process, it will attempt to connect to the remote anvil node and use this plugin as the ape interface.
+
+## Impersonate Accounts
+
+You can impersonate accounts using the `ape-foundry` plugin.
+To impersonate an account, do the following:
+
+```python
+import pytest
+
+@pytest.fixture
+def whale(accounts):
+    return accounts["example.ens"]
+```
+
+To transact, your impersonated account must have a balance.
+You can achieve this by using a forked network and impersonating an account with a balance.
+Alternatively, you can set your node's base fee and priority fee to `0`.
+
+To programtically set an account's balance, do the following:
+
+```python
+from ape import accounts
+
+account = accounts["example.ens"]
+account.balance = "1000 ETH"  # This calls `anvil_setBalance` under-the-hood.
+```
+
+## Base Fee and Priority Fee
+
+Configure your node's base fee and priority fee using the `ape-config.yaml` file.
+
+```yaml
+foundry:
+  base_fee: 0
+  priority_fee: 0
+```

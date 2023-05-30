@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import List
 
 import pytest
-from ape.contracts import ContractContainer
-from ethpm_types import ContractType
 
 from .expected_traces import (
     LOCAL_GAS_REPORT,
@@ -53,22 +51,6 @@ def full_contracts_cache(config):
 )
 def mainnet_receipt(request, mainnet_fork_provider):
     return mainnet_fork_provider.get_receipt(request.param)
-
-
-@pytest.fixture
-def contract_a(owner, connected_provider):
-    base_path = BASE_CONTRACTS_PATH / "local"
-
-    def get_contract_type(suffix: str) -> ContractType:
-        return ContractType.parse_file(base_path / f"contract_{suffix}.json")
-
-    contract_c = owner.deploy(ContractContainer(get_contract_type("c")))
-    contract_b = owner.deploy(ContractContainer(get_contract_type("b")), contract_c.address)
-    contract_a = owner.deploy(
-        ContractContainer(get_contract_type("a")), contract_b.address, contract_c.address
-    )
-
-    return contract_a
 
 
 @pytest.fixture

@@ -15,6 +15,8 @@ polygon:
 foundry:
   request_timeout: 29
   fork_request_timeout: 360
+  priority_fee: 0
+  base_fee: 0
 
   fork:
     ethereum:

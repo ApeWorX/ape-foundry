@@ -244,3 +244,20 @@ def test_base_fee(connected_provider):
 
 def test_automine(connected_provider):
     assert connected_provider.auto_mine is True
+
+
+@pytest.mark.parametrize(
+    "message",
+    (
+        "Error: VM Exception while processing transaction: reverted with reason string ",
+        "Transaction reverted without a reason string",
+        "execution reverted",
+    ),
+)
+def test_get_virtual_machine_error_from_contract_logic_message_includes_base_err(
+    message, connected_provider
+):
+    exception = Exception(message)
+    actual = connected_provider.get_virtual_machine_error(exception)
+    assert isinstance(actual, ContractLogicError)
+    assert actual.base_err == exception

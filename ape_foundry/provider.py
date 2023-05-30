@@ -167,8 +167,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def priority_fee(self) -> int:
-        return 0
-        # return self.config.priority_fee
+        return self.config.priority_fee
 
     @property
     def is_connected(self) -> bool:
@@ -349,7 +348,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         super().disconnect()
 
     def build_command(self) -> List[str]:
-        cmd = [
+        return [
             self.anvil_bin,
             "--port",
             f"{self._port or DEFAULT_PORT}",
@@ -363,7 +362,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--block-base-fee-per-gas",
             f"{self.config.base_fee}",
         ]
-        return cmd
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)

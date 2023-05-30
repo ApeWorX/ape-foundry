@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from ape.api.accounts import ImpersonatedAccount
 from ape.exceptions import ContractLogicError
 from ape.pytest.contextmanagers import RevertsContextManager as reverts
 from ape.types import CallTreeNode, TraceFrame
@@ -90,9 +91,20 @@ def test_snapshot_and_revert(connected_provider):
     assert block_1.hash == block_3.hash
 
 
-def test_unlock_account(connected_provider, accounts):
+def test_unlock_account(connected_provider, contract_a, accounts):
     actual = connected_provider.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
+
+    # Tell Anvil we no longer want this unlocked.
+    connected_provider.relock_account(TEST_WALLET_ADDRESS)
+
+    # Unlock using the more public API.
+    acct = accounts[TEST_WALLET_ADDRESS]
+    assert isinstance(acct, ImpersonatedAccount)
+
+    # Ensure can transact.
+    receipt = contract_a.methodWithoutArguments(sender=acct)
+    assert not receipt.failed
 
 
 def test_get_transaction_trace(connected_provider, contract_instance, owner):
@@ -206,6 +218,17 @@ def test_revert_error(error_contract, not_owner):
     """
     with pytest.raises(error_contract.Unauthorized):
         error_contract.withdraw(sender=not_owner)
+
+
+def test_revert_error_using_impersonated_account(error_contract, accounts, connected_provider):
+    """
+    Show that when a failure occurs when a txn is sent by an impersonated
+    account, that everything still works.
+    """
+    acct = accounts[TEST_WALLET_ADDRESS]
+    acct.balance = "1000 ETH"
+    with pytest.raises(error_contract.Unauthorized):
+        error_contract.withdraw(sender=acct)
 
 
 def test_host(temp_config, networks):

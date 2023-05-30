@@ -78,6 +78,10 @@ class FoundryNetworkConfig(PluginConfig):
     fork_request_timeout: int = 300
     process_attempts: int = 0
 
+    # RPC defaults
+    base_fee: int = 0
+    priority_fee: int = 0
+
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryForkProvider.
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
@@ -163,7 +167,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def priority_fee(self) -> int:
-        return self.conversion_manager.convert("2 gwei", int)
+        return self.config.priority_fee
 
     @property
     def is_connected(self) -> bool:
@@ -355,6 +359,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--derivation-path",
             "m/44'/60'/0'",
             "--steps-tracing",
+            "--block-base-fee-per-gas",
+            f"{self.config.base_fee}",
         ]
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
@@ -398,6 +404,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._make_request("anvil_impersonateAccount", [address])
         return True
 
+    def relock_account(self, address: AddressType):
+        self._make_request("anvil_stopImpersonatingAccount", [address])
+        if address in self.account_manager.test_accounts._impersonated_accounts:
+            del self.account_manager.test_accounts._impersonated_accounts[address]
+
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation
@@ -415,16 +426,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             if original_code:
                 self.set_code(sender, "")
 
+            txn_dict = txn.dict()
+            if isinstance(txn_dict.get("type"), int):
+                txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
+
+            tx_params = cast(TxParams, txn_dict)
             try:
-                txn_dict = txn.dict()
-                if isinstance(txn_dict.get("type"), int):
-                    txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
-
-                tx_params = cast(TxParams, txn_dict)
                 txn_hash = self.web3.eth.send_transaction(tx_params)
-
             except ValueError as err:
-                raise self.get_virtual_machine_error(err) from err
+                raise self.get_virtual_machine_error(err, txn=txn) from err
+
             finally:
                 if original_code:
                     self.set_code(sender, original_code.hex())
@@ -438,10 +449,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     # Add additional nonce information
                     new_err_msg = f"Nonce '{txn.nonce}' is too low"
                     raise VirtualMachineError(
-                        new_err_msg, base_err=vm_err.base_err, code=vm_err.code
+                        new_err_msg,
+                        base_err=vm_err.base_err,
+                        code=vm_err.code,
+                        txn=txn,
+                        source_traceback=vm_err.source_traceback,
+                        trace=vm_err.trace,
+                        contract_address=vm_err.contract_address,
                     )
 
-                vm_err.txn = txn
                 raise vm_err from err
 
         receipt = self.get_receipt(
@@ -468,8 +484,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             try:
                 self.web3.eth.call(txn_params)
             except Exception as err:
-                vm_err = self.get_virtual_machine_error(err, txn=txn)
-                vm_err.txn = txn
+                vm_err = self.get_virtual_machine_error(err, txn=receipt)
                 raise vm_err from err
 
         logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
@@ -621,7 +636,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
             return self.compiler_manager.enrich_error(err)
 
-        elif message == "Transaction ran out of gas":
+        elif message == "Transaction ran out of gas" or "OutOfGas" in message:
             return OutOfGasError(**kwargs)
 
         elif message.startswith("execution reverted: "):

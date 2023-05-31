@@ -385,6 +385,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_timestamp(self, new_timestamp: int):
         self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
+    def get_auto_mine(self) -> bool:
+        return self._make_request("anvil_getAutoMine", [])
+
     def mine(self, num_blocks: int = 1):
         result = self._make_request("evm_mine", [{"blocks": num_blocks, "timestamp": None}])
         if result != "0x0":

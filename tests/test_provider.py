@@ -236,3 +236,7 @@ def test_host(temp_config, networks):
     with temp_config(data):
         provider = networks.ethereum.local.get_provider("foundry")
         assert provider.uri == "https://example.com"
+
+
+def test_base_fee(connected_provider):
+    assert connected_provider.base_fee == 0

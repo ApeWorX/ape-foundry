@@ -36,6 +36,7 @@ EXPECTED_GAS_REPORT = rf"""
   transfer +\d +\d+ + \d+ + \d+ + \d+
 {TOKEN_B_GAS_REPORT}
 """
+COVERAGE_START_PATTERN = re.compile(r"=+ Coverage Profile =+")
 
 
 def filter_expected_methods(*methods_to_remove: str) -> str:
@@ -102,3 +103,16 @@ def test_gas_flag_exclude_method_using_cli_option(ape_pytester):
     expected = expected.replace(TOKEN_B_GAS_REPORT, "")
     result = ape_pytester.runpytest("--gas", "--gas-exclude", "*:fooAndBar,*:myNumber,tokenB:*")
     run_gas_test(result, expected_report=expected)
+
+
+@pytest.mark.fork
+def test_coverage(ape_pytester):
+    """
+    NOTE: Since vyper is required, we are unable to have decent tests
+    verifying Foundry in coverage.
+    TODO: Write + Run tests in an env with both vyper and foundry.
+    """
+    result = ape_pytester.runpytest("--coverage")
+    result.assert_outcomes(passed=NUM_TESTS)
+    assert any("Coverage Profile" in ln for ln in result.outlines)
+    assert any("WARNING: No coverage data found." in ln for ln in result.outlines)

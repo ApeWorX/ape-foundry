@@ -240,3 +240,7 @@ def test_host(temp_config, networks):
 
 def test_base_fee(connected_provider):
     assert connected_provider.base_fee == 0
+
+
+def test_automine(connected_provider):
+    assert connected_provider.auto_mine is True

@@ -30,7 +30,7 @@ from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, Snapshot
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
-from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
+from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_bytes, to_hex
 from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
@@ -697,6 +697,18 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         self._make_request("anvil_setCode", [address, code])
         return True
+
+    def set_storage(self, address: AddressType, slot: int, value: HexBytes):
+        def to_bytes32(val):
+            val_bytes = to_bytes(val)
+            if len(val_bytes) > 32:
+                raise ValueError(f"Value {val} must be <=32 bytes")
+            return HexBytes(b"\x00" * (32 - len(val_bytes))) + val_bytes
+
+        self._make_request(
+            "anvil_setStorageAt",
+            [address, to_bytes32(slot).hex(), to_bytes32(value).hex()],
+        )
 
     def _eth_call(self, arguments: List) -> bytes:
         # Override from Web3Provider because foundry is pickier.

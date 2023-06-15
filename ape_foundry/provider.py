@@ -703,7 +703,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             val_bytes = to_bytes(val)
             if len(val_bytes) > 32:
                 raise ValueError(f"Value {val} must be <=32 bytes")
-            return HexBytes(b"\x00" * (32 - len(val_bytes))) + val_bytes
+            return HexBytes(val_bytes.rjust(32, b"\x00"))
 
         self._make_request(
             "anvil_setStorageAt",

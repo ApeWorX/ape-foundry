@@ -164,6 +164,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def uri(self) -> str:
+        if self.config.host:
+            if "https" not in self.config.host or "http" not in self.config.host:
+                self.config.host = "http://" + self.config.host  # type: ignore
         if self._host is None:
             self._host = self.config.host or f"http://127.0.0.1:{DEFAULT_PORT}"
 
@@ -222,7 +225,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._host = self.provider_settings["host"]
 
         elif self._host is None:
-            self._host = self.config.host or f"http://127.0.0.1:{DEFAULT_PORT}"
+            self._host = self.uri or f"http://127.0.0.1:{DEFAULT_PORT}"
 
         if self.is_connected:
             # Connects to already running process

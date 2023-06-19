@@ -13,6 +13,7 @@ TOKEN_B_GAS_REPORT = r"""
 
   Method +Times called +Min. +Max. +Mean +Median
  ─+
+  __init__ +\d +\d+ + \d+ + \d+ + \d+
   balanceOf +\d +\d+ + \d+ + \d+ + \d+
   transfer +\d +\d+ + \d+ + \d+ + \d+
 """
@@ -21,14 +22,16 @@ EXPECTED_GAS_REPORT = rf"""
 
   Method +Times called +Min. +Max. +Mean +Median
  ─+
+  __init__ +\d +\d+ + \d+ + \d+ + \d+
+  fooAndBar +\d +\d+ + \d+ + \d+ + \d+
   myNumber +\d +\d+ + \d+ + \d+ + \d+
   setNumber +\d +\d+ + \d+ + \d+ + \d+
-  fooAndBar +\d +\d+ + \d+ + \d+ + \d+
 
  +TokenA Gas
 
   Method +Times called +Min. +Max. +Mean +Median
  ─+
+  __init__ +\d +\d+ + \d+ + \d+ + \d+
   balanceOf +\d +\d+ + \d+ + \d+ + \d+
   transfer +\d +\d+ + \d+ + \d+ + \d+
 {TOKEN_B_GAS_REPORT}

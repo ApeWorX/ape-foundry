@@ -22,6 +22,7 @@ from ape.exceptions import (
     ContractLogicError,
     OutOfGasError,
     SubprocessError,
+    TransactionError,
     VirtualMachineError,
 )
 from ape.logging import logger
@@ -626,15 +627,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            err = ContractLogicError(revert_message=message, **kwargs)
+            err = ContractLogicError(base_err=exception, revert_message=message, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
         elif "Transaction reverted without a reason string" in message:
-            err = ContractLogicError(**kwargs)
+            err = ContractLogicError(base_err=exception, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
         elif message.lower() == "execution reverted":
-            err = ContractLogicError(**kwargs)
+            err = ContractLogicError(TransactionError.DEFAULT_MESSAGE, base_err=exception, **kwargs)
 
             if isinstance(exception, Web3ContractLogicError):
                 # Check for custom error.
@@ -655,18 +656,26 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     if custom_err:
                         err.message = f"0x{custom_err}"
 
+            err.message = (
+                TransactionError.DEFAULT_MESSAGE if err.message in ("", "0x", None) else err.message
+            )
             return self.compiler_manager.enrich_error(err)
 
         elif message == "Transaction ran out of gas" or "OutOfGas" in message:
-            return OutOfGasError(**kwargs)
+            return OutOfGasError(base_err=exception, **kwargs)
 
         elif message.startswith("execution reverted: "):
-            err = ContractLogicError(message.replace("execution reverted: ", "").strip(), **kwargs)
+            message = (
+                message.replace("execution reverted: ", "").strip()
+                or TransactionError.DEFAULT_MESSAGE
+            )
+            err = ContractLogicError(message, base_err=exception, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
         elif isinstance(exception, ContractCustomError):
             # Is raw hex (custom exception)
-            err = ContractLogicError(message, **kwargs)
+            message = TransactionError.DEFAULT_MESSAGE if message in ("", None, "0x") else message
+            err = ContractLogicError(message, base_err=exception, **kwargs)
             return self.compiler_manager.enrich_error(err)
 
         return VirtualMachineError(message, **kwargs)

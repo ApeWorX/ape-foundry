@@ -77,7 +77,7 @@ class FoundryNetworkConfig(PluginConfig):
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
     request_timeout: int = 30
     fork_request_timeout: int = 300
-    process_attempts: int = 0
+    process_attempts: int = 5
 
     # RPC defaults
     base_fee: int = 0
@@ -165,9 +165,25 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def uri(self) -> str:
-        if self._host is None:
-            self._host = self.config.host or f"http://127.0.0.1:{DEFAULT_PORT}"
-
+        if self._host is not None:
+            return self._host
+        if config_host := self.config.host:
+            if config_host == "auto":
+                self._host = "auto"
+                return self._host
+            if not config_host.startswith("http"):
+                if "127.0.0.1" in config_host or "localhost" in config_host:
+                    self._host = f"http://{config_host}"
+                else:
+                    self._host = f"https://{config_host}"
+            else:
+                self._host = config_host
+            if "127.0.0.1" in config_host or "localhost" in config_host:
+                host_without_http = self._host[7:]
+                if ":" not in host_without_http:
+                    self._host = f"{self._host}:{DEFAULT_PORT}"
+        else:
+            self._host = f"http://127.0.0.1:{DEFAULT_PORT}"
         return self._host
 
     @property
@@ -223,7 +239,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._host = self.provider_settings["host"]
 
         elif self._host is None:
-            self._host = self.config.host or f"http://127.0.0.1:{DEFAULT_PORT}"
+            self._host = self.uri
 
         if self.is_connected:
             # Connects to already running process
@@ -317,32 +333,31 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):
-        use_random_port = self.uri == "auto"
+        use_random_port = self._host == "auto"
         if use_random_port:
             self._host = None
 
-            if DEFAULT_PORT not in self.attempted_ports and not use_random_port:
+            if DEFAULT_PORT not in self.attempted_ports:
                 # First, attempt the default port before anything else.
                 self._host = f"127.0.0.1:{DEFAULT_PORT}"
 
-            else:
-                # Pick a random port
+            # Pick a random port
+            port = random.randint(EPHEMERAL_PORTS_START, EPHEMERAL_PORTS_END)
+            max_attempts = 25
+            attempts = 0
+            while port in self.attempted_ports:
                 port = random.randint(EPHEMERAL_PORTS_START, EPHEMERAL_PORTS_END)
-                max_attempts = 25
-                attempts = 0
-                while port in self.attempted_ports:
-                    port = random.randint(EPHEMERAL_PORTS_START, EPHEMERAL_PORTS_END)
-                    attempts += 1
-                    if attempts == max_attempts:
-                        ports_str = ", ".join([str(p) for p in self.attempted_ports])
-                        raise FoundryProviderError(
-                            f"Unable to find an available port. Ports tried: {ports_str}"
-                        )
+                attempts += 1
+                if attempts == max_attempts:
+                    ports_str = ", ".join([str(p) for p in self.attempted_ports])
+                    raise FoundryProviderError(
+                        f"Unable to find an available port. Ports tried: {ports_str}"
+                    )
 
-                self.attempted_ports.append(port)
-                self._host = f"http://127.0.0.1:{port}"
+            self.attempted_ports.append(port)
+            self._host = f"http://127.0.0.1:{port}"
 
-        elif ":" in self._host and self._port is not None:
+        elif self._host is not None and ":" in self._host and self._port is not None:
             # Append the one and only port to the attempted ports list, for honest keeping.
             self.attempted_ports.append(self._port)
 

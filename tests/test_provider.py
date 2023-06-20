@@ -231,7 +231,7 @@ def test_revert_error_using_impersonated_account(error_contract, accounts, conne
         error_contract.withdraw(sender=acct)
 
 
-@pytest.mark.parameterize("host", ("https://example.com", "example.com"))
+@pytest.mark.parametrize("host", ("https://example.com", "example.com"))
 def test_host(temp_config, networks, host):
     data = {"foundry": {"host": host}}
     with temp_config(data):

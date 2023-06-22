@@ -6,6 +6,7 @@ from ape.api.accounts import ImpersonatedAccount
 from ape.exceptions import ContractLogicError
 from ape.pytest.contextmanagers import RevertsContextManager as reverts
 from ape.types import CallTreeNode, TraceFrame
+from eth_utils import to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
 
@@ -197,6 +198,13 @@ def test_set_code(connected_provider, contract_container, owner):
     assert provider.get_code(contract.address) != code
     assert provider.set_code(contract.address, code) is True
     assert provider.get_code(contract.address) == code
+
+
+def test_set_storage(connected_provider, contract_container, owner):
+    contract = contract_container.deploy(sender=owner)
+    assert to_int(connected_provider.get_storage_at(contract.address, "0x2b5e3af16b1880000")) == 0
+    connected_provider.set_storage(contract.address, "0x2b5e3af16b1880000", "0x1")
+    assert to_int(connected_provider.get_storage_at(contract.address, "0x2b5e3af16b1880000")) == 1
 
 
 def test_return_value(connected_provider, contract_instance, owner):

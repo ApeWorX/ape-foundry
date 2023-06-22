@@ -48,6 +48,7 @@ from yarl import URL
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
+from .utils import to_bytes32
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
@@ -697,6 +698,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         self._make_request("anvil_setCode", [address, code])
         return True
+
+    def set_storage(self, address: AddressType, slot: int, value: HexBytes):
+        self._make_request(
+            "anvil_setStorageAt",
+            [address, to_bytes32(slot).hex(), to_bytes32(value).hex()],
+        )
 
     def _eth_call(self, arguments: List) -> bytes:
         # Override from Web3Provider because foundry is pickier.

@@ -26,7 +26,15 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, BlockID, CallTreeNode, ContractCode, SnapshotID, TraceFrame
+from ape.types import (
+    AddressType,
+    BlockID,
+    CallTreeNode,
+    ContractCode,
+    SnapshotID,
+    SourceTraceback,
+    TraceFrame,
+)
 from ape.utils import cached_property
 from ape_test import Config as TestConfig
 from eth_typing import HexStr
@@ -525,8 +533,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         show_gas = kwargs.pop("show_gas_report", False)
         show_trace = kwargs.pop("show_trace", False)
-        track_gas = self._test_runner is not None and self._test_runner.gas_tracker.enabled
-        needs_trace = show_gas or show_trace or track_gas
+
+        if self._test_runner is not None:
+            track_gas = self._test_runner.gas_tracker.enabled
+            track_coverage = self._test_runner.coverage_tracker.enabled
+        else:
+            track_gas = False
+            track_coverage = False
+
+        needs_trace = track_gas or track_coverage or show_gas or show_trace
         if not needs_trace:
             return self._eth_call(arguments)
 
@@ -537,6 +552,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             arguments[0]["type"] = to_hex(arguments[0]["type"])
 
         result, trace_frames = self._trace_call(arguments)
+        trace_frames, frames_copy = tee(trace_frames)
         return_value = HexBytes(result["returnValue"])
         root_node_kwargs = {
             "gas_cost": result.get("gas", 0),
@@ -558,13 +574,27 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Optimization to enrich early and in_place=True.
             call_tree.enrich()
 
-        if track_gas and call_tree and receiver is not None:
+        if track_gas and call_tree and receiver is not None and self._test_runner is not None:
             # Gas report being collected, likely for showing a report
             # at the end of a test run.
             # Use `in_place=False` in case also `show_trace=True`
             enriched_call_tree = call_tree.enrich(in_place=False)
-            if self._test_runner:
-                self._test_runner.gas_tracker.append_gas(enriched_call_tree, receiver)
+            self._test_runner.gas_tracker.append_gas(enriched_call_tree, receiver)
+
+        if track_coverage and self._test_runner is not None and receiver:
+            contract_type = self.chain_manager.contracts.get(receiver)
+            if contract_type:
+                traceframes = (self._create_trace_frame(x) for x in frames_copy)
+                method_id = HexBytes(txn.data)
+                selector = (
+                    contract_type.methods[method_id].selector
+                    if method_id in contract_type.methods
+                    else None
+                )
+                source_traceback = SourceTraceback.create(contract_type, traceframes, method_id)
+                self._test_runner.coverage_tracker.cover(
+                    source_traceback, function=selector, contract=contract_type.name
+                )
 
         if show_gas:
             enriched_call_tree = call_tree.enrich(in_place=False)

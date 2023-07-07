@@ -134,3 +134,32 @@ foundry:
   base_fee: 0
   priority_fee: 0
 ```
+
+# Auto-mining
+
+Anvil nodes by default auto-mine.
+However, you can disable auto-mining on startup by configuring the foundry plugin like so:
+
+```yaml
+foundry:
+  auto_mine: false
+```
+
+Else, you can disable auto-mining using the provider instance:
+
+```python
+from ape import chain
+
+anvil = chain.provider
+anvil.auto_mine = False  # calls `anvil_setAutomine` RPC.
+```
+
+### Mine on an interval
+
+By default, Anvil will mine a new block every time a transaction is submitted.
+To mine on an interval instead, set the `block_time` config:
+
+```yaml
+foundry:
+  block_time: 10  # mine a new block every 10 seconds
+```

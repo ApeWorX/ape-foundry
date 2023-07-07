@@ -153,3 +153,13 @@ from ape import chain
 anvil = chain.provider
 anvil.auto_mine = False  # calls `anvil_setAutomine` RPC.
 ```
+
+### Mine on an interval
+
+By default, Anvil will mine a new block every time a transaction is submitted.
+To mine on an interval instead, set the `block_time` config:
+
+```yaml
+foundry:
+  block_time: 10  # mine a new block every 10 seconds
+```

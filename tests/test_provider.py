@@ -283,3 +283,13 @@ def test_no_mining(temp_config, networks, connected_provider):
         provider = networks.ethereum.local.get_provider("foundry")
         cmd = provider.build_command()
         assert "--no-mining" in cmd
+
+
+def test_block_time(temp_config, networks, connected_provider):
+    assert "--block-time" not in connected_provider.build_command()
+    data = {"foundry": {"block_time": 10}}
+    with temp_config(data):
+        provider = networks.ethereum.local.get_provider("foundry")
+        cmd = provider.build_command()
+        assert "--block-time" in cmd
+        assert "10" in cmd

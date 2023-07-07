@@ -102,6 +102,12 @@ class FoundryNetworkConfig(PluginConfig):
     Automatically mine blocks instead of manually doing so.
     """
 
+    block_time: Optional[int] = None
+    """
+    Set a block time to allow mining to happen on an interval
+    rather than only when a new transaction is submitted.
+    """
+
     class Config:
         extra = "allow"
 
@@ -411,6 +417,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if not self.config.auto_mine:
             cmd.append("--no-mining")
+
+        if self.config.block_time is not None:
+            cmd.extend(("--block-time", f"{self.config.block_time}"))
 
         return cmd
 

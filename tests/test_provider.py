@@ -251,7 +251,11 @@ def test_base_fee(connected_provider):
     assert connected_provider.base_fee == 0
 
 
-def test_automine(connected_provider):
+def test_auto_mine(connected_provider):
+    assert connected_provider.auto_mine is True
+    connected_provider.auto_mine = False
+    assert connected_provider.auto_mine is False
+    connected_provider.auto_mine = True
     assert connected_provider.auto_mine is True
 
 

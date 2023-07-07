@@ -208,6 +208,18 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def auto_mine(self) -> bool:
         return self._make_request("anvil_getAutomine", [])
 
+    @auto_mine.setter
+    def auto_mine(self, value):
+        self._make_request("anvil_setAutomine", [value])
+
+    def __setattr__(self, attr: str, value: Any) -> None:
+        # NOTE: Need to do this until https://github.com/pydantic/pydantic/pull/2625 is figured out
+        if attr == "auto_mine":
+            self._make_request("anvil_setAutomine", [value])
+
+        else:
+            super().__setattr__(attr, value)
+
     def connect(self):
         """
         Start the foundry process and verify it's up and accepting connections.

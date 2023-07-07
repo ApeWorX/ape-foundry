@@ -97,6 +97,11 @@ class FoundryNetworkConfig(PluginConfig):
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
     fork: Dict[str, Dict[str, FoundryForkConfig]] = {}
 
+    auto_mine: bool = True
+    """
+    Automatically mine blocks instead of manually doing so.
+    """
+
     class Config:
         extra = "allow"
 
@@ -389,7 +394,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         super().disconnect()
 
     def build_command(self) -> List[str]:
-        return [
+        cmd = [
             self.anvil_bin,
             "--port",
             f"{self._port or DEFAULT_PORT}",
@@ -403,6 +408,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--block-base-fee-per-gas",
             f"{self.config.base_fee}",
         ]
+
+        if not self.config.auto_mine:
+            cmd.append("--no-mining")
+
+        return cmd
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)

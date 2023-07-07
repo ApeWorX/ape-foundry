@@ -274,3 +274,12 @@ def test_get_virtual_machine_error_from_contract_logic_message_includes_base_err
     actual = connected_provider.get_virtual_machine_error(exception)
     assert isinstance(actual, ContractLogicError)
     assert actual.base_err == exception
+
+
+def test_no_mining(temp_config, networks, connected_provider):
+    assert "--no-mining" not in connected_provider.build_command()
+    data = {"foundry": {"auto_mine": "false"}}
+    with temp_config(data):
+        provider = networks.ethereum.local.get_provider("foundry")
+        cmd = provider.build_command()
+        assert "--no-mining" in cmd

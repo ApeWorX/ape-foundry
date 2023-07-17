@@ -392,7 +392,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         else:
             self._host = f"http://127.0.0.1:{DEFAULT_PORT}"
 
-        self.start()
+        if "127.0.0.1" in self._host or "localhost" in self._host:
+            # Start local process
+            self.start()
+
+        else:
+            raise FoundryProviderError(f"Failed to connect to Anvil node at '{self._clean_uri}'.")
 
     def disconnect(self):
         self._web3 = None

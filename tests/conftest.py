@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -257,3 +258,12 @@ def contract_a(owner, connected_provider, get_contract_type):
         ContractContainer(get_contract_type("contract_a")), contract_b.address, contract_c.address
     )
     return contract_a
+
+
+@pytest.fixture
+def no_anvil_bin(monkeypatch):
+    original_path = os.environ.get("PATH")
+    modified_path = ":".join(path for path in original_path.split(":") if "anvil" not in path)
+    monkeypatch.setenv("PATH", modified_path)
+    yield
+    monkeypatch.setenv("PATH", original_path)

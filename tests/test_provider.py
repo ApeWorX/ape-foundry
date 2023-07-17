@@ -10,6 +10,7 @@ from eth_utils import to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
 
+from ape_foundry import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
@@ -293,3 +294,14 @@ def test_block_time(temp_config, networks, connected_provider):
         cmd = provider.build_command()
         assert "--block-time" in cmd
         assert "10" in cmd
+
+
+def test_remote_host(temp_config, networks, no_anvil_bin):
+    data = {"foundry": {"host": "https://example.com"}}
+    with temp_config(data):
+        with pytest.raises(
+            FoundryProviderError,
+            match=r"Failed to connect to Anvil node at 'https://example.com'\.",
+        ):
+            with networks.ethereum.local.use_provider("foundry"):
+                assert True

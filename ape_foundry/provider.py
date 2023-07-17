@@ -328,7 +328,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return
 
         self._web3 = Web3(HTTPProvider(self.uri, request_kwargs={"timeout": self.timeout}))
-        if not self._web3.is_connected():
+
+        try:
+            is_connected = self._web3.is_connected()
+        except Exception:
+            is_connected = False
+
+        if not is_connected:
             self._web3 = None
             return
 

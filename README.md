@@ -99,7 +99,11 @@ foundry:
 
 Now, instead of launching a local process, it will attempt to connect to the remote anvil node and use this plugin as the ape interface.
 
-To connect to a remote anvil node using an environment variable, set environment variable `APE_FOUNDRY_HOST=https://your-anvil.example.com`.
+To connect to a remote anvil node using an environment variable, set `APE_FOUNDRY_HOST`:
+
+```bash
+export APE_FOUNDRY_HOST=https://your-anvil.example.com`
+```
 
 ## Impersonate Accounts
 

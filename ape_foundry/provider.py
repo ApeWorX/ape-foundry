@@ -131,10 +131,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._test_config.mnemonic
 
     @property
-    def base_fee(self) -> int:
-        return self.config.base_fee
-
-    @property
     def number_of_accounts(self) -> int:
         return self._test_config.number_of_accounts
 

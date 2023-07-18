@@ -1,3 +1,4 @@
+import os
 import random
 import shutil
 from bisect import bisect_right
@@ -144,7 +145,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def _clean_uri(self) -> str:
-        return str(URL(self.uri).with_user(None).with_password(None))
+        try:
+            return str(URL(self.uri).with_user(None).with_password(None))
+        except ValueError:
+            # Likely isn't a real URI.
+            return self.uri
 
     @property
     def _port(self) -> Optional[int]:
@@ -271,6 +276,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         elif "host" in self.provider_settings:
             self._host = self.provider_settings["host"]
 
+        elif "APE_FOUNDRY_HOST" in os.environ:
+            self._host = os.environ["APE_FOUNDRY_HOST"]
+
         elif self._host is None:
             self._host = self.uri
 
@@ -278,8 +286,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Connects to already running process
             self._start()
 
-        elif self.config.manage_process:
+        elif self.config.manage_process and (
+            "localhost" in self._host or "127.0.0.1" in self._host or self._host == "auto"
+        ):
             # Only do base-process setup if not connecting to already-running process
+            # and is running on localhost.
             super().connect()
             if self._host:
                 self._set_web3()

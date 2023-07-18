@@ -231,7 +231,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def gas_price(self) -> int:
         # TODO: Remove this once Ape > 0.6.13
         result = super().gas_price
-        return int(result, 16) if isinstance(result, str) and is_0x_prefixed(result) else int(result)
+        if isinstance(result, str) and is_0x_prefixed(result):
+            return int(result, 16)
+
+        return result
 
     def __setattr__(self, attr: str, value: Any) -> None:
         # NOTE: Need to do this until https://github.com/pydantic/pydantic/pull/2625 is figured out

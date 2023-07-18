@@ -1,3 +1,4 @@
+import os
 import tempfile
 from pathlib import Path
 
@@ -301,7 +302,25 @@ def test_remote_host(temp_config, networks, no_anvil_bin):
     with temp_config(data):
         with pytest.raises(
             FoundryProviderError,
-            match=r"Failed to connect to Anvil node at 'https://example.com'\.",
+            match=r"Failed to connect to remote Anvil node at 'https://example.com'\.",
         ):
             with networks.ethereum.local.use_provider("foundry"):
                 assert True
+
+
+def test_remote_host_using_env_var(temp_config, networks, no_anvil_bin):
+    original = os.environ.get("APE_FOUNDRY_HOST")
+    os.environ["APE_FOUNDRY_HOST"] = "https://example2.com"
+    try:
+        with pytest.raises(
+            FoundryProviderError,
+            match=r"Failed to connect to remote Anvil node at 'https://example2.com'\.",
+        ):
+            with networks.ethereum.local.use_provider("foundry"):
+                assert True
+
+    finally:
+        if original is None:
+            del os.environ["APE_FOUNDRY_HOST"]
+        else:
+            os.environ["APE_FOUNDRY_HOST"] = original

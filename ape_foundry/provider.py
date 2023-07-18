@@ -227,6 +227,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def auto_mine(self) -> bool:
         return self._make_request("anvil_getAutomine", [])
 
+    @property
+    def gas_price(self) -> int:
+        # TODO: Remove this once Ape > 0.6.13
+        result = super().gas_price
+        return int(result, 16) if isinstance(result, str) and is_0x_prefixed(result) else int(result)
+
     def __setattr__(self, attr: str, value: Any) -> None:
         # NOTE: Need to do this until https://github.com/pydantic/pydantic/pull/2625 is figured out
         if attr == "auto_mine":

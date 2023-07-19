@@ -418,7 +418,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Start local process
             self.start()
 
-        else:
+        elif not self.is_connected:
             raise FoundryProviderError(f"Failed to connect to Anvil node at '{self._clean_uri}'.")
 
     def disconnect(self):

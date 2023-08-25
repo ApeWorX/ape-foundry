@@ -195,7 +195,7 @@ def test_set_code(connected_provider, contract_container, owner):
     contract = contract_container.deploy(sender=owner)
     provider = connected_provider
     code = provider.get_code(contract.address)
-    assert type(code) == HexBytes
+    assert type(code) is HexBytes
     assert provider.set_code(contract.address, "0x00") is True
     assert provider.get_code(contract.address) != code
     assert provider.set_code(contract.address, code) is True

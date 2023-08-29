@@ -43,7 +43,11 @@ from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
-from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace, create_trace_frames
+from evm_trace import (
+    create_trace_frames,
+    get_calltree_from_geth_trace,
+    get_calltree_from_parity_trace,
+)
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError

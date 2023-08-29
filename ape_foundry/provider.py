@@ -43,7 +43,11 @@ from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
-from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
+from evm_trace import (
+    create_trace_frames,
+    get_calltree_from_geth_trace,
+    get_calltree_from_parity_trace,
+)
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
@@ -663,7 +667,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def _trace_call(self, arguments: List[Any]) -> Tuple[Dict, Iterator[EvmTraceFrame]]:
         result = self._make_request("debug_traceCall", arguments)
         trace_data = result.get("structLogs", [])
-        return result, (EvmTraceFrame(**f) for f in trace_data)
+        return result, create_trace_frames(trace_data)
 
     def get_balance(self, address: str) -> int:
         if hasattr(address, "address"):
@@ -683,9 +687,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         result = self._make_request(
             "debug_traceTransaction", [txn_hash, {"stepsTracing": True, "enableMemory": True}]
         )
-        frames = result.get("structLogs", [])
-        for frame in frames:
-            yield EvmTraceFrame(**frame)
+        yield from create_trace_frames(result.get("structLogs", []))
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
         raw_trace_list = self._make_request("trace_transaction", [txn_hash])
@@ -802,10 +804,17 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         try:
             result = self._make_request("eth_call", arguments)
         except Exception as err:
-            trace = (self._create_trace_frame(x) for x in self._trace_call(arguments)[1])
+            trace, trace2 = tee(self._create_trace_frame(x) for x in self._trace_call(arguments)[1])
             contract_address = arguments[0]["to"]
+            contract_type = self.chain_manager.contracts.get(contract_address)
+            method_id = arguments[0].get("data", "")[:10] or None
+            tb = (
+                SourceTraceback.create(contract_type, trace, method_id)
+                if method_id and contract_type
+                else None
+            )
             raise self.get_virtual_machine_error(
-                err, trace=trace, contract_address=contract_address
+                err, trace=trace2, contract_address=contract_address, source_traceback=tb
             ) from err
 
         return HexBytes(result)

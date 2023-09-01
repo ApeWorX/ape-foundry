@@ -12,6 +12,8 @@ EVM_VERSION_BY_NETWORK = {
             9200000: "muirglacier",
             12244000: "berlin",
             12965000: "london",
+            15537394: "paris",
+            17034870: "shanghai",
         },
         "goerli": {
             0: "petersburg",

@@ -19,7 +19,7 @@ extras_require = {
         "types-setuptools",  # Needed due to mypy typeshed
         "types-PyYAML",  # Needed due to mypy typeshed
         "flake8>=6.0.1,<7",  # Style linter
-        "isort>=<5.10.1,<6",  # Import sorting linter
+        "isort<=5.10.1,<6",  # Import sorting linter
         "mdformat>=0.7.17",  # Auto-formatter for markdown
         "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
         "mdformat-frontmatter>=0.4.1",  # Needed for frontmatters-style headers in issue templates

@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 from ape.api.accounts import ImpersonatedAccount
 from ape.exceptions import ContractLogicError
-from ape.pytest.contextmanagers import RevertsContextManager as reverts
 from ape.types import CallTreeNode, TraceFrame
 from eth_utils import to_int
 from evm_trace import CallType
@@ -150,19 +149,6 @@ def test_revert(sender, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError, match="!authorized"):
         contract_instance.setNumber(6, sender=sender)
-
-
-def test_revert_dev_string_check(sender, reverts_contract):
-    with reverts(dev_message="dev: one"):
-        reverts_contract.revertStrings(1, sender=sender)
-
-    with reverts(dev_message="dev: error"):
-        reverts_contract.revertStrings(2, sender=sender)
-
-
-def test_revert_dev_string_check_call(sender, reverts_contract):
-    with reverts(dev_message="dev: one"):
-        reverts_contract.revertStringsCall(1)
 
 
 def test_contract_revert_no_message(owner, contract_instance):

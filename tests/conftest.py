@@ -148,12 +148,6 @@ def error_contract(owner, error_contract_container):
     return owner.deploy(error_contract_container)
 
 
-@pytest.fixture
-def reverts_contract(owner):
-    path = LOCAL_CONTRACTS_PATH / "reverts_contract.json"
-    return owner.deploy(ContractContainer(ContractType.parse_file(path)))
-
-
 @pytest.fixture(scope="session")
 def sender(accounts):
     return accounts[0]

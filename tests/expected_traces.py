@@ -1,29 +1,51 @@
 LOCAL_TRACE = r"""
 Call trace for '0x([A-Fa-f0-9]{64})'
 tx\.origin=0x[a-fA-F0-9]{40}
-ContractA\.methodWithoutArguments\(\) -> 0x00..5174 \[\d+ gas\]
-├── SYMBOL\.methodB1\(lolol="ice-cream", dynamo=36\) \[\d+ gas\]
+ContractA\.methodWithoutArguments\(\) -> 0x00\.\.5174 \[\d+ gas\]
+├── SYMBOL\.supercluster\(x=234444\) -> \[
+│       \[23523523235235, 11111111111, 234444\],
+│       \[
+│         345345347789999991,
+│         99999998888882,
+│         345457847457457458457457457
+│       \],
+│       \[234444, 92222229999998888882, 3454\],
+│       \[
+│         111145345347789999991,
+│         333399998888882,
+│         234545457847457457458457457457
+│       \]
+│     \] \[\d+ gas\]
+├── SYMBOL\.methodB1\(lolol="ice-cream", dynamo=345457847457457458457457457\) \[\d+ gas\]
 │   ├── ContractC\.getSomeList\(\) -> \[
 │   │     3425311345134513461345134534531452345,
 │   │     111344445534535353,
 │   │     993453434534534534534977788884443333
 │   │   \] \[\d+ gas\]
-│   └── ContractC\.methodC1\(windows95="simpler", jamaica=36, cardinal=ContractA\) \[\d+ gas\]
-├── SYMBOL\.callMe\(blue=tx.origin\) -> tx\.origin \[\d+ gas\]
-├── SYMBOL\.methodB2\(trombone=tx.origin\) \[\d+ gas\]
-│   ├── ContractC\.paperwork\(ContractA\) -> \(os="simpler", country=36, wings=ContractA\) \[\d+ gas\]
+│   └── ContractC\.methodC1\(
+│         windows95="simpler",
+│         jamaica=345457847457457458457457457,
+│         cardinal=ContractA
+│       \) \[\d+ gas\]
+├── SYMBOL\.callMe\(blue=tx\.origin\) -> tx\.origin \[\d+ gas\]
+├── SYMBOL\.methodB2\(trombone=tx\.origin\) \[\d+ gas\]
+│   ├── ContractC\.paperwork\(ContractA\) -> \(
+│   │     os="simpler",
+│   │     country=345457847457457458457457457,
+│   │     wings=ContractA
+│   │   \) \[\d+ gas\]
 │   ├── ContractC\.methodC1\(windows95="simpler", jamaica=0, cardinal=ContractC\) \[\d+ gas\]
 │   ├── ContractC\.methodC2\(\) \[\d+ gas\]
 │   └── ContractC\.methodC2\(\) \[\d+ gas\]
-├── ContractC\.addressToValue\(tx\.origin\) -> 0 \[\d+ gas\]
-├── SYMBOL\.bandPractice\(tx\.origin\) -> 0 \[\d+ gas\]
+├── ContractC\.addressToValue\(tx.origin\) -> 0 \[\d+ gas\]
+├── SYMBOL\.bandPractice\(tx.origin\) -> 0 \[\d+ gas\]
 ├── SYMBOL\.methodB1\(lolol="lemondrop", dynamo=0\) \[\d+ gas\]
 │   ├── ContractC\.getSomeList\(\) -> \[
 │   │     3425311345134513461345134534531452345,
 │   │     111344445534535353,
 │   │     993453434534534534534977788884443333
 │   │   \] \[\d+ gas\]
-│   └── ContractC.methodC1\(windows95="simpler", jamaica=0, cardinal=ContractA\) \[\d+ gas\]
+│   └── ContractC\.methodC1\(windows95="simpler", jamaica=0, cardinal=ContractA\) \[\d+ gas\]
 └── SYMBOL\.methodB1\(lolol="snitches_get_stiches", dynamo=111\) \[\d+ gas\]
     ├── ContractC\.getSomeList\(\) -> \[
     │     3425311345134513461345134534531452345,

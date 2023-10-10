@@ -143,18 +143,13 @@ def test_contract_revert_no_message(owner, mainnet_fork_contract_instance, mainn
 
 @pytest.mark.fork
 def test_transaction_contract_as_sender(
-    mainnet_fork_contract_instance, mainnet_fork_provider, convert
+    mainnet_fork_contract_instance, owner, contract_container, mainnet_fork_provider, convert
 ):
     # Set balance so test wouldn't normally fail from lack of funds
-    mainnet_fork_provider.set_balance(mainnet_fork_contract_instance.address, "1000 ETH")
+    contract = owner.deploy(contract_container)
+    mainnet_fork_provider.set_balance(contract.address, "1000 ETH")
     with pytest.raises(ContractLogicError, match="!authorized"):
-        # NOTE: For some reason, this only fails when for estimate gas. Otherwise, the status
-        # is non-failing. This wasn't happened prior to Ape 0.6.9 because a bugfix revealed
-        # that the test config was never getting applied and thus we never hit this problem
-        # because it was estimating gas before (even tho should have been using max).
-        mainnet_fork_contract_instance.setNumber(
-            10, sender=mainnet_fork_contract_instance, gas="auto"
-        )
+        mainnet_fork_contract_instance.setNumber(10, sender=contract)
 
 
 @pytest.mark.fork

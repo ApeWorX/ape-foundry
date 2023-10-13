@@ -175,8 +175,7 @@ def test_connect_to_polygon(networks, owner, contract_container):
     """
     Ensures we don't get PoA middleware issue.
     """
-    # NOTE: `disconnect_after=True` because of a bug in Ape with settings not re-applying.
-    with networks.polygon.mumbai_fork.use_provider("foundry", disconnect_after=True):
+    with networks.polygon.mumbai_fork.use_provider("foundry"):
         contract = owner.deploy(contract_container)
         assert isinstance(contract, ContractInstance)  # Didn't fail
 

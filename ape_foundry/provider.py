@@ -187,7 +187,16 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @property
     def uri(self) -> str:
         if self._host is not None:
-            return self._host
+            if (
+                self.settings.host
+                and self.settings.host.startswith("http")
+                and self._host
+                and self._host.startswith("http")
+                and self.settings.host == self._host
+            ):
+                return self._host
+            # else: was changed in config.
+
         if config_host := self.settings.host:
             if config_host == "auto":
                 self._host = "auto"
@@ -283,10 +292,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 # This will trigger selecting a random port on localhost and trying.
                 self._host = "auto"
 
-        elif "host" in self.provider_settings:
-            self._host = self.provider_settings["host"]
-
-        elif "APE_FOUNDRY_HOST" in os.environ:
+        if "APE_FOUNDRY_HOST" in os.environ:
             self._host = os.environ["APE_FOUNDRY_HOST"]
 
         elif self._host is None:
@@ -435,11 +441,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._web3 = None
         self._host = None
         super().disconnect()
-
-    # def update_settings(self, new_settings: dict):
-    #     self.disconnect()
-    #     self.provider_settings.update(new_settings)
-    #     self.connect()
 
     def build_command(self) -> List[str]:
         cmd = [

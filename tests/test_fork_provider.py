@@ -175,6 +175,25 @@ def test_connect_to_polygon(networks, owner, contract_container):
     """
     Ensures we don't get PoA middleware issue.
     """
-    with networks.polygon.mumbai_fork.use_provider("foundry"):
+    # NOTE: `disconnect_after=True` because of a bug in Ape with settings not re-applying.
+    with networks.polygon.mumbai_fork.use_provider("foundry", disconnect_after=True):
         contract = owner.deploy(contract_container)
         assert isinstance(contract, ContractInstance)  # Didn't fail
+
+
+@pytest.mark.fork
+def test_block_number_in_provider_settings(networks):
+    expected_block_number = 1234
+    fork_settings = {
+        "fork": {
+            "polygon": {
+                "mumbai": {
+                    "block_number": expected_block_number,
+                }
+            }
+        }
+    }
+    with networks.polygon.mumbai_fork.use_provider(
+        "foundry", provider_settings=fork_settings
+    ) as provider:
+        assert provider.fork_block_number == expected_block_number

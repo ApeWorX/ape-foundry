@@ -141,7 +141,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def timeout(self) -> int:
-        return self.config.request_timeout
+        return self.settings.request_timeout
 
     @property
     def _clean_uri(self) -> str:
@@ -160,7 +160,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if self.cached_chain_id is not None:
             return self.cached_chain_id
 
-        elif self.cached_chain_id is None and hasattr(self.web3, "eth"):
+        elif self.cached_chain_id is None and self._web3 is not None and hasattr(self.web3, "eth"):
             self.cached_chain_id = self.web3.eth.chain_id
             return self.cached_chain_id
 
@@ -188,7 +188,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def uri(self) -> str:
         if self._host is not None:
             return self._host
-        if config_host := self.config.host:
+        if config_host := self.settings.host:
             if config_host == "auto":
                 self._host = "auto"
                 return self._host
@@ -219,7 +219,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def priority_fee(self) -> int:
-        return self.config.priority_fee
+        return self.settings.priority_fee
 
     @property
     def is_connected(self) -> bool:
@@ -247,6 +247,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return result
 
+    @property
+    def settings(self) -> FoundryNetworkConfig:
+        return cast(FoundryNetworkConfig, super().settings)
+
     def __setattr__(self, attr: str, value: Any) -> None:
         # NOTE: Need to do this until https://github.com/pydantic/pydantic/pull/2625 is figured out
         if attr == "auto_mine":
@@ -262,23 +266,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         """
 
         warning = "`port` setting is deprecated. Please use `host` key that includes the port."
-        if "port" in self.provider_settings:
-            # TODO: Can remove after 0.7.
-            logger.warning(warning)
-            self._host = f"http://127.0.0.1:{self.provider_settings['port']}"
 
-        elif self.config.port != DEFAULT_PORT and self.config.host is not None:
+        if self.settings.port != DEFAULT_PORT and self.settings.host is not None:
             raise FoundryProviderError(
                 "Cannot use deprecated `port` field with `host`. "
                 "Place `port` at end of `host` instead."
             )
 
-        elif self.config.port != DEFAULT_PORT:
+        elif self.settings.port != DEFAULT_PORT:
             # We only get here if the user configured a port without a host,
             # the old way of doing it. TODO: Can remove after 0.7.
             logger.warning(warning)
-            if self.config.port not in (None, "auto"):
-                self._host = f"http://127.0.0.1:{self.config.port}"
+            if self.settings.port not in (None, "auto"):
+                self._host = f"http://127.0.0.1:{self.settings.port}"
             else:
                 # This will trigger selecting a random port on localhost and trying.
                 self._host = "auto"
@@ -296,7 +296,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Connects to already running process
             self._start()
 
-        elif self.config.manage_process and (
+        elif self.settings.manage_process and (
             "localhost" in self._host or "127.0.0.1" in self._host or self._host == "auto"
         ):
             # Only do base-process setup if not connecting to already-running process
@@ -333,7 +333,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         f"at host '{self._clean_uri}'."
                     )
             else:
-                for _ in range(self.config.process_attempts):
+                for _ in range(self.settings.process_attempts):
                     try:
                         self._start()
                         break
@@ -436,6 +436,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._host = None
         super().disconnect()
 
+    # def update_settings(self, new_settings: dict):
+    #     self.disconnect()
+    #     self.provider_settings.update(new_settings)
+    #     self.connect()
+
     def build_command(self) -> List[str]:
         cmd = [
             self.anvil_bin,
@@ -449,14 +454,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
             "--steps-tracing",
             "--block-base-fee-per-gas",
-            f"{self.config.base_fee}",
+            f"{self.settings.base_fee}",
         ]
 
-        if not self.config.auto_mine:
+        if not self.settings.auto_mine:
             cmd.append("--no-mining")
 
-        if self.config.block_time is not None:
-            cmd.extend(("--block-time", f"{self.config.block_time}"))
+        if self.settings.block_time is not None:
+            cmd.extend(("--block-time", f"{self.settings.block_time}"))
 
         return cmd
 
@@ -887,24 +892,23 @@ class FoundryForkProvider(FoundryProvider):
 
     @property
     def timeout(self) -> int:
-        return self.config.fork_request_timeout
+        return self.settings.fork_request_timeout
 
     @property
     def _upstream_network_name(self) -> str:
         return self.network.name.replace("-fork", "")
 
-    @cached_property
+    @property
     def _fork_config(self) -> FoundryForkConfig:
-        config = cast(FoundryNetworkConfig, self.config)
         ecosystem_name = self.network.ecosystem.name
-        if ecosystem_name not in config.fork:
+        if ecosystem_name not in self.settings.fork:
             return FoundryForkConfig()  # Just use default
 
         network_name = self._upstream_network_name
-        if network_name not in config.fork[ecosystem_name]:
+        if network_name not in self.settings.fork[ecosystem_name]:
             return FoundryForkConfig()  # Just use default
 
-        return config.fork[ecosystem_name][network_name]
+        return self.settings.fork[ecosystem_name][network_name]
 
     @cached_property
     def _upstream_provider(self) -> UpstreamProvider:

@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, c
 
 from ape.api import (
     BlockAPI,
+    ForkedNetworkAPI,
     PluginConfig,
     ReceiptAPI,
     SubprocessProvider,
@@ -911,32 +912,31 @@ class FoundryForkProvider(FoundryProvider):
 
         return self.settings.fork[ecosystem_name][network_name]
 
-    @cached_property
-    def _upstream_provider(self) -> UpstreamProvider:
-        upstream_network = self.network.ecosystem.networks[self._upstream_network_name]
-        upstream_provider_name = self._fork_config.upstream_provider
-        # NOTE: if 'upstream_provider_name' is 'None', this gets the default upstream provider.
-        return upstream_network.get_provider(provider_name=upstream_provider_name)
+    @property
+    def forked_network(self) -> ForkedNetworkAPI:
+        return cast(ForkedNetworkAPI, self.network)
 
     def connect(self):
         super().connect()
 
-        # Verify that we're connected to a Foundry node with fork mode.
-        upstream_provider = self._upstream_provider
-        upstream_provider.connect()
-        try:
-            upstream_genesis_block_hash = upstream_provider.get_block(0).hash
-        except ExtraDataLengthError as err:
-            if isinstance(upstream_provider, Web3Provider):
-                logger.error(
-                    f"Upstream provider '{upstream_provider.name}' missing Geth PoA middleware."
-                )
-                upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-                upstream_genesis_block_hash = upstream_provider.get_block(0).hash
-            else:
-                raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err
+        # If using the provider config for upstream_provider,
+        # set the network one in this session, so other features work in core.
+        if upstream_name := self._fork_config.upstream_provider:
+            self.forked_network.network_config.upstream_provider = upstream_name
 
-        upstream_provider.disconnect()
+        with self.forked_network.use_upstream_provider() as upstream_provider:
+            try:
+                upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+            except ExtraDataLengthError as err:
+                if isinstance(upstream_provider, Web3Provider):
+                    logger.error(
+                        f"Upstream provider '{upstream_provider.name}' missing Geth PoA middleware."
+                    )
+                    upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+                    upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+                else:
+                    raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err
+
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(
                 "Upstream network has mismatching genesis block. "

@@ -16,7 +16,6 @@ from ape.api import (
     SubprocessProvider,
     TestProviderAPI,
     TransactionAPI,
-    UpstreamProvider,
     Web3Provider,
 )
 from ape.exceptions import (
@@ -45,6 +44,7 @@ from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
+from pydantic import root_validator
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
@@ -139,6 +139,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @property
     def process_name(self) -> str:
         return "anvil"
+
+    @property
+    def connection_id(self) -> Optional[str]:
+        return f"{self.network_choice}:{self._host}"
 
     @property
     def timeout(self) -> int:
@@ -400,6 +404,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):
+        if self.is_connected:
+            return
+
         use_random_port = self._host == "auto"
         if use_random_port:
             self._host = None
@@ -857,9 +864,26 @@ class FoundryForkProvider(FoundryProvider):
     to use as your archive node.
     """
 
-    @property
-    def fork_url(self) -> str:
-        return self._upstream_provider.connection_str
+    @root_validator()
+    def set_upstream_provider(cls, value):
+        network = value["network"]
+        adhoc_settings = value.get("provider_settings", {}).get("fork", {})
+        ecosystem_name = network.ecosystem.name
+        plugin_config = cls.config_manager.get_config(value["name"])
+        config_settings = plugin_config.get("fork", {})
+
+        def _get_upstream(data: Dict) -> Optional[str]:
+            return (
+                data.get(ecosystem_name, {})
+                .get(network.name.replace("-fork", ""), {})
+                .get("upstream_provider")
+            )
+
+        # If upstream provider set anywhere in provider settings, ignore.
+        if name := (_get_upstream(adhoc_settings) or _get_upstream(config_settings)):
+            getattr(network.ecosystem.config, network.name).upstream_provider = name
+
+        return value
 
     @property
     def fork_block_number(self) -> Optional[int]:
@@ -881,8 +905,8 @@ class FoundryForkProvider(FoundryProvider):
         if self.fork_block_number is None:
             return None
 
-        ecosystem = self._upstream_provider.network.ecosystem.name
-        network = self._upstream_provider.network.name
+        ecosystem = self.forked_network.ecosystem.name
+        network = self.forked_network.upstream_network.name
         try:
             hardforks = EVM_VERSION_BY_NETWORK[ecosystem][network]
         except KeyError:
@@ -897,16 +921,12 @@ class FoundryForkProvider(FoundryProvider):
         return self.settings.fork_request_timeout
 
     @property
-    def _upstream_network_name(self) -> str:
-        return self.network.name.replace("-fork", "")
-
-    @property
     def _fork_config(self) -> FoundryForkConfig:
         ecosystem_name = self.network.ecosystem.name
         if ecosystem_name not in self.settings.fork:
             return FoundryForkConfig()  # Just use default
 
-        network_name = self._upstream_network_name
+        network_name = self.forked_network.upstream_network.name
         if network_name not in self.settings.fork[ecosystem_name]:
             return FoundryForkConfig()  # Just use default
 
@@ -916,14 +936,22 @@ class FoundryForkProvider(FoundryProvider):
     def forked_network(self) -> ForkedNetworkAPI:
         return cast(ForkedNetworkAPI, self.network)
 
+    @property
+    def upstream_provider_name(self) -> str:
+        if upstream_name := self._fork_config.upstream_provider:
+            self.forked_network.network_config.upstream_provider = upstream_name
+
+        return self.forked_network.network_config.upstream_provider
+
+    @property
+    def fork_url(self) -> str:
+        return self.forked_network.upstream_provider.connection_str
+
     def connect(self):
         super().connect()
 
         # If using the provider config for upstream_provider,
         # set the network one in this session, so other features work in core.
-        if upstream_name := self._fork_config.upstream_provider:
-            self.forked_network.network_config.upstream_provider = upstream_name
-
         with self.forked_network.use_upstream_provider() as upstream_provider:
             try:
                 upstream_genesis_block_hash = upstream_provider.get_block(0).hash
@@ -944,11 +972,6 @@ class FoundryForkProvider(FoundryProvider):
             )
 
     def build_command(self) -> List[str]:
-        if not isinstance(self._upstream_provider, UpstreamProvider):
-            raise FoundryProviderError(
-                f"Provider '{self._upstream_provider.name}' is not an upstream provider."
-            )
-
         if not self.fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 

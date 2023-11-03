@@ -181,18 +181,25 @@ def test_connect_to_polygon(networks, owner, contract_container):
 
 
 @pytest.mark.fork
-def test_block_number_in_provider_settings(networks):
+@pytest.mark.parametrize("network,port", [("mumbai", 9878), ("mainnet", 9879)])
+def test_provider_settings(networks, network, port):
     expected_block_number = 1234
-    fork_settings = {
+    settings = {
+        "host": f"http://127.0.0.1:{port}",
         "fork": {
             "polygon": {
-                "mumbai": {
+                network: {
                     "block_number": expected_block_number,
                 }
             }
-        }
+        },
     }
-    with networks.polygon.mumbai_fork.use_provider(
-        "foundry", provider_settings=fork_settings
-    ) as provider:
+    provider_ctx = networks.polygon.get_network(f"{network}-fork").use_provider(
+        "foundry", provider_settings=settings
+    )
+    actual = provider_ctx._provider.settings
+    assert actual.host == settings["host"]
+    assert actual.fork["polygon"][network]["block_number"] == expected_block_number
+
+    with provider_ctx as provider:
         assert provider.fork_block_number == expected_block_number

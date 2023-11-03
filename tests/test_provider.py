@@ -297,13 +297,16 @@ def test_remote_host(temp_config, networks, no_anvil_bin):
 def test_remote_host_using_env_var(temp_config, networks, no_anvil_bin):
     original = os.environ.get("APE_FOUNDRY_HOST")
     os.environ["APE_FOUNDRY_HOST"] = "https://example2.com"
+
     try:
         with pytest.raises(
             FoundryProviderError,
             match=r"Failed to connect to remote Anvil node at 'https://example2.com'\.",
         ):
-            with networks.ethereum.local.use_provider("foundry"):
-                assert True
+            with networks.ethereum.local.use_provider("foundry") as provider:
+                # It shouldn't actually get to the line below,
+                # but in case it does, this is a helpful debug line.
+                assert provider.uri == os.environ["APE_FOUNDRY_HOST"], "env var not setting."
 
     finally:
         if original is None:

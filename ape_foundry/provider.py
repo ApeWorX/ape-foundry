@@ -192,17 +192,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @property
     def uri(self) -> str:
         if self._host is not None:
-            if (
-                self.settings.host
-                and self.settings.host.startswith("http")
-                and self._host
-                and self._host.startswith("http")
-                and self.settings.host == self._host
-            ):
-                return self._host
-            # else: was changed in config.
+            return self._host
 
-        if config_host := self.settings.host:
+        elif config_host := self.settings.host:
             if config_host == "auto":
                 self._host = "auto"
                 return self._host
@@ -213,12 +205,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     self._host = f"https://{config_host}"
             else:
                 self._host = config_host
+
             if "127.0.0.1" in config_host or "localhost" in config_host:
                 host_without_http = self._host[7:]
                 if ":" not in host_without_http:
                     self._host = f"{self._host}:{DEFAULT_PORT}"
+
         else:
             self._host = f"http://127.0.0.1:{DEFAULT_PORT}"
+
         return self._host
 
     @property

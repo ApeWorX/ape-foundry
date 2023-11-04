@@ -8,14 +8,15 @@ from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
 
+from ape._pydantic_compat import root_validator
 from ape.api import (
     BlockAPI,
+    ForkedNetworkAPI,
     PluginConfig,
     ReceiptAPI,
     SubprocessProvider,
     TestProviderAPI,
     TransactionAPI,
-    UpstreamProvider,
     Web3Provider,
 )
 from ape.exceptions import (
@@ -140,8 +141,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return "anvil"
 
     @property
+    def connection_id(self) -> Optional[str]:
+        return f"{self.network_choice}:{self._host}"
+
+    @property
     def timeout(self) -> int:
-        return self.config.request_timeout
+        return self.settings.request_timeout
 
     @property
     def _clean_uri(self) -> str:
@@ -160,7 +165,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if self.cached_chain_id is not None:
             return self.cached_chain_id
 
-        elif self.cached_chain_id is None and hasattr(self.web3, "eth"):
+        elif self.cached_chain_id is None and self._web3 is not None and hasattr(self.web3, "eth"):
             self.cached_chain_id = self.web3.eth.chain_id
             return self.cached_chain_id
 
@@ -188,7 +193,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def uri(self) -> str:
         if self._host is not None:
             return self._host
-        if config_host := self.config.host:
+
+        elif config_host := self.settings.host:
             if config_host == "auto":
                 self._host = "auto"
                 return self._host
@@ -199,12 +205,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     self._host = f"https://{config_host}"
             else:
                 self._host = config_host
+
             if "127.0.0.1" in config_host or "localhost" in config_host:
                 host_without_http = self._host[7:]
                 if ":" not in host_without_http:
                     self._host = f"{self._host}:{DEFAULT_PORT}"
+
         else:
             self._host = f"http://127.0.0.1:{DEFAULT_PORT}"
+
         return self._host
 
     @property
@@ -219,7 +228,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def priority_fee(self) -> int:
-        return self.config.priority_fee
+        return self.settings.priority_fee
 
     @property
     def is_connected(self) -> bool:
@@ -247,6 +256,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return result
 
+    @property
+    def settings(self) -> FoundryNetworkConfig:
+        return cast(FoundryNetworkConfig, super().settings)
+
     def __setattr__(self, attr: str, value: Any) -> None:
         # NOTE: Need to do this until https://github.com/pydantic/pydantic/pull/2625 is figured out
         if attr == "auto_mine":
@@ -262,31 +275,24 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         """
 
         warning = "`port` setting is deprecated. Please use `host` key that includes the port."
-        if "port" in self.provider_settings:
-            # TODO: Can remove after 0.7.
-            logger.warning(warning)
-            self._host = f"http://127.0.0.1:{self.provider_settings['port']}"
 
-        elif self.config.port != DEFAULT_PORT and self.config.host is not None:
+        if self.settings.port != DEFAULT_PORT and self.settings.host is not None:
             raise FoundryProviderError(
                 "Cannot use deprecated `port` field with `host`. "
                 "Place `port` at end of `host` instead."
             )
 
-        elif self.config.port != DEFAULT_PORT:
+        elif self.settings.port != DEFAULT_PORT:
             # We only get here if the user configured a port without a host,
             # the old way of doing it. TODO: Can remove after 0.7.
             logger.warning(warning)
-            if self.config.port not in (None, "auto"):
-                self._host = f"http://127.0.0.1:{self.config.port}"
+            if self.settings.port not in (None, "auto"):
+                self._host = f"http://127.0.0.1:{self.settings.port}"
             else:
                 # This will trigger selecting a random port on localhost and trying.
                 self._host = "auto"
 
-        elif "host" in self.provider_settings:
-            self._host = self.provider_settings["host"]
-
-        elif "APE_FOUNDRY_HOST" in os.environ:
+        if "APE_FOUNDRY_HOST" in os.environ:
             self._host = os.environ["APE_FOUNDRY_HOST"]
 
         elif self._host is None:
@@ -296,7 +302,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Connects to already running process
             self._start()
 
-        elif self.config.manage_process and (
+        elif self.settings.manage_process and (
             "localhost" in self._host or "127.0.0.1" in self._host or self._host == "auto"
         ):
             # Only do base-process setup if not connecting to already-running process
@@ -333,7 +339,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         f"at host '{self._clean_uri}'."
                     )
             else:
-                for _ in range(self.config.process_attempts):
+                for _ in range(self.settings.process_attempts):
                     try:
                         self._start()
                         break
@@ -393,6 +399,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
     def _start(self):
+        if self.is_connected:
+            return
+
         use_random_port = self._host == "auto"
         if use_random_port:
             self._host = None
@@ -449,14 +458,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "m/44'/60'/0'",
             "--steps-tracing",
             "--block-base-fee-per-gas",
-            f"{self.config.base_fee}",
+            f"{self.settings.base_fee}",
         ]
 
-        if not self.config.auto_mine:
+        if not self.settings.auto_mine:
             cmd.append("--no-mining")
 
-        if self.config.block_time is not None:
-            cmd.extend(("--block-time", f"{self.config.block_time}"))
+        if self.settings.block_time is not None:
+            cmd.extend(("--block-time", f"{self.settings.block_time}"))
 
         return cmd
 
@@ -850,9 +859,26 @@ class FoundryForkProvider(FoundryProvider):
     to use as your archive node.
     """
 
-    @property
-    def fork_url(self) -> str:
-        return self._upstream_provider.connection_str
+    @root_validator()
+    def set_upstream_provider(cls, value):
+        network = value["network"]
+        adhoc_settings = value.get("provider_settings", {}).get("fork", {})
+        ecosystem_name = network.ecosystem.name
+        plugin_config = cls.config_manager.get_config(value["name"])
+        config_settings = plugin_config.get("fork", {})
+
+        def _get_upstream(data: Dict) -> Optional[str]:
+            return (
+                data.get(ecosystem_name, {})
+                .get(network.name.replace("-fork", ""), {})
+                .get("upstream_provider")
+            )
+
+        # If upstream provider set anywhere in provider settings, ignore.
+        if name := (_get_upstream(adhoc_settings) or _get_upstream(config_settings)):
+            getattr(network.ecosystem.config, network.name).upstream_provider = name
+
+        return value
 
     @property
     def fork_block_number(self) -> Optional[int]:
@@ -874,8 +900,8 @@ class FoundryForkProvider(FoundryProvider):
         if self.fork_block_number is None:
             return None
 
-        ecosystem = self._upstream_provider.network.ecosystem.name
-        network = self._upstream_provider.network.name
+        ecosystem = self.forked_network.ecosystem.name
+        network = self.forked_network.upstream_network.name
         try:
             hardforks = EVM_VERSION_BY_NETWORK[ecosystem][network]
         except KeyError:
@@ -887,51 +913,53 @@ class FoundryForkProvider(FoundryProvider):
 
     @property
     def timeout(self) -> int:
-        return self.config.fork_request_timeout
+        return self.settings.fork_request_timeout
 
     @property
-    def _upstream_network_name(self) -> str:
-        return self.network.name.replace("-fork", "")
-
-    @cached_property
     def _fork_config(self) -> FoundryForkConfig:
-        config = cast(FoundryNetworkConfig, self.config)
         ecosystem_name = self.network.ecosystem.name
-        if ecosystem_name not in config.fork:
+        if ecosystem_name not in self.settings.fork:
             return FoundryForkConfig()  # Just use default
 
-        network_name = self._upstream_network_name
-        if network_name not in config.fork[ecosystem_name]:
+        network_name = self.forked_network.upstream_network.name
+        if network_name not in self.settings.fork[ecosystem_name]:
             return FoundryForkConfig()  # Just use default
 
-        return config.fork[ecosystem_name][network_name]
+        return self.settings.fork[ecosystem_name][network_name]
 
-    @cached_property
-    def _upstream_provider(self) -> UpstreamProvider:
-        upstream_network = self.network.ecosystem.networks[self._upstream_network_name]
-        upstream_provider_name = self._fork_config.upstream_provider
-        # NOTE: if 'upstream_provider_name' is 'None', this gets the default upstream provider.
-        return upstream_network.get_provider(provider_name=upstream_provider_name)
+    @property
+    def forked_network(self) -> ForkedNetworkAPI:
+        return cast(ForkedNetworkAPI, self.network)
+
+    @property
+    def upstream_provider_name(self) -> str:
+        if upstream_name := self._fork_config.upstream_provider:
+            self.forked_network.network_config.upstream_provider = upstream_name
+
+        return self.forked_network.network_config.upstream_provider
+
+    @property
+    def fork_url(self) -> str:
+        return self.forked_network.upstream_provider.connection_str
 
     def connect(self):
         super().connect()
 
-        # Verify that we're connected to a Foundry node with fork mode.
-        upstream_provider = self._upstream_provider
-        upstream_provider.connect()
-        try:
-            upstream_genesis_block_hash = upstream_provider.get_block(0).hash
-        except ExtraDataLengthError as err:
-            if isinstance(upstream_provider, Web3Provider):
-                logger.error(
-                    f"Upstream provider '{upstream_provider.name}' missing Geth PoA middleware."
-                )
-                upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        # If using the provider config for upstream_provider,
+        # set the network one in this session, so other features work in core.
+        with self.forked_network.use_upstream_provider() as upstream_provider:
+            try:
                 upstream_genesis_block_hash = upstream_provider.get_block(0).hash
-            else:
-                raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err
+            except ExtraDataLengthError as err:
+                if isinstance(upstream_provider, Web3Provider):
+                    logger.error(
+                        f"Upstream provider '{upstream_provider.name}' missing Geth PoA middleware."
+                    )
+                    upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+                    upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+                else:
+                    raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err
 
-        upstream_provider.disconnect()
         if self.get_block(0).hash != upstream_genesis_block_hash:
             logger.warning(
                 "Upstream network has mismatching genesis block. "
@@ -939,11 +967,6 @@ class FoundryForkProvider(FoundryProvider):
             )
 
     def build_command(self) -> List[str]:
-        if not isinstance(self._upstream_provider, UpstreamProvider):
-            raise FoundryProviderError(
-                f"Provider '{self._upstream_provider.name}' is not an upstream provider."
-            )
-
         if not self.fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 

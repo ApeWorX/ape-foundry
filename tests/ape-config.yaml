@@ -11,6 +11,8 @@ polygon:
     default_provider: foundry
   mumbai:
     default_provider: alchemy
+  mainnet:
+    default_provider: alchemy
 
 foundry:
   request_timeout: 29

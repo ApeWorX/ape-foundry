@@ -13,8 +13,8 @@ extras_require = {
         "ape-polygon",  # For running polygon fork tests
     ],
     "lint": [
-        "black>=23.7.0,<24",  # auto-formatter and linter
-        "mypy>=1.5.1,<2",  # Static type analyzer
+        "black>=23.10.1,<24",  # auto-formatter and linter
+        "mypy>=1.6.1,<2",  # Static type analyzer
         "types-requests",  # Needed due to mypy typeshed
         "types-setuptools",  # Needed due to mypy typeshed
         "types-PyYAML",  # Needed due to mypy typeshed
@@ -69,7 +69,7 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.6.12,<0.7",
+        "eth-ape>=0.6.24,<0.7",
         "evm-trace",  # Use same version as ape
         "hexbytes",  # Use same version as ape
         "web3",  # Use same version as ape

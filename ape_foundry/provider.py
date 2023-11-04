@@ -8,6 +8,7 @@ from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
 
+from ape._pydantic_compat import root_validator
 from ape.api import (
     BlockAPI,
     ForkedNetworkAPI,
@@ -44,7 +45,6 @@ from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
-from pydantic import root_validator
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError

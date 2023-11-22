@@ -13,16 +13,17 @@ extras_require = {
         "ape-polygon",  # For running polygon fork tests
     ],
     "lint": [
-        "black>=23.10.1,<24",  # auto-formatter and linter
-        "mypy>=1.6.1,<2",  # Static type analyzer
-        "types-requests",  # Needed due to mypy typeshed
-        "types-setuptools",  # Needed due to mypy typeshed
-        "types-PyYAML",  # Needed due to mypy typeshed
-        "flake8>=6.0.1,<7",  # Style linter
+        "black>=23.11.0,<24",  # Auto-formatter and linter
+        "mypy>=1.7.0,<2",  # Static type analyzer
+        "types-requests",  # Needed for mypy type shed
+        "types-setuptools",  # Needed for mypy type shed
+        "types-PyYAML",  # Needed for mypy type shed
+        "flake8>=6.1.0,<7",  # Style linter
         "isort>=5.10.1,<6",  # Import sorting linter
         "mdformat>=0.7.17",  # Auto-formatter for markdown
         "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
         "mdformat-frontmatter>=0.4.1",  # Needed for frontmatters-style headers in issue templates
+        "mdformat-pyproject>=0.0.1",  # Allows configuring in pyproject.toml
     ],
     "doc": [
         "Sphinx>=6.1.3,<7",  # Documentation generator
@@ -69,9 +70,9 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.6.24,<0.7",
+        "eth-ape>=0.7.0,<0.8",
+        "ethpm-types",  # Use same version as eth-ape
         "evm-trace",  # Use same version as ape
-        "hexbytes",  # Use same version as ape
         "web3",  # Use same version as ape
         "yarl",  # Use same version as ape
     ],

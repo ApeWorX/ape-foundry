@@ -44,7 +44,8 @@ from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
-from pydantic import ConfigDict, model_validator
+from pydantic import model_validator
+from pydantic_settings import SettingsConfigDict
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
@@ -109,7 +110,7 @@ class FoundryNetworkConfig(PluginConfig):
     Set a block time to allow mining to happen on an interval
     rather than only when a new transaction is submitted.
     """
-    model_config = ConfigDict(extra="allow")
+    model_config = SettingsConfigDict(extra="allow")
 
 
 def _call(*args):
@@ -595,7 +596,13 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.chain_manager.history.append(receipt)
         return receipt
 
-    def send_call(self, txn: TransactionAPI, **kwargs: Any) -> bytes:
+    def send_call(
+        self,
+        txn: TransactionAPI,
+        block_id: Optional[BlockID] = None,
+        state: Optional[Dict] = None,
+        **kwargs,
+    ) -> HexBytes:
         skip_trace = kwargs.pop("skip_trace", False)
         arguments = self._prepare_call(txn, **kwargs)
 
@@ -682,7 +689,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         trace_data = result.get("structLogs", [])
         return result, (EvmTraceFrame(**f) for f in trace_data)
 
-    def get_balance(self, address: str) -> int:
+    def get_balance(self, address: AddressType, block_id: Optional[BlockID] = None) -> int:
         if hasattr(address, "address"):
             address = address.address
 
@@ -806,7 +813,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             [address, to_bytes32(slot).hex(), to_bytes32(value).hex()],
         )
 
-    def _eth_call(self, arguments: List) -> bytes:
+    def _eth_call(self, arguments: List) -> HexBytes:
         # Override from Web3Provider because foundry is pickier.
 
         txn_dict = copy(arguments[0])

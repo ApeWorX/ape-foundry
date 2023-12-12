@@ -603,6 +603,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         state: Optional[Dict] = None,
         **kwargs,
     ) -> HexBytes:
+        if block_id is not None:
+            kwargs["block_identifier"] = block_id
+        if state is not None:
+            kwargs["state_override"] = state
         skip_trace = kwargs.pop("skip_trace", False)
         arguments = self._prepare_call(txn, **kwargs)
 

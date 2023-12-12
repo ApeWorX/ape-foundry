@@ -116,8 +116,8 @@ def networks():
 @pytest.fixture
 def get_contract_type():
     def fn(name: str) -> ContractType:
-        json_file = json.loads((LOCAL_CONTRACTS_PATH / f"{name}.json").read_text())
-        return ContractType.model_validate(json_file)
+        json_path = LOCAL_CONTRACTS_PATH / f"{name}.json"
+        return ContractType.model_validate_json(json_path.read_text())
 
     return fn
 

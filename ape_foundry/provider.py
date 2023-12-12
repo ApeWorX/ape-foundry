@@ -8,7 +8,6 @@ from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
 
-from ape._pydantic_compat import root_validator
 from ape.api import (
     BlockAPI,
     ForkedNetworkAPI,
@@ -17,7 +16,6 @@ from ape.api import (
     SubprocessProvider,
     TestProviderAPI,
     TransactionAPI,
-    Web3Provider,
 )
 from ape.exceptions import (
     APINotImplementedError,
@@ -38,13 +36,15 @@ from ape.types import (
     TraceFrame,
 )
 from ape.utils import cached_property
+from ape_ethereum.provider import Web3Provider
 from ape_test import Config as TestConfig
+from eth_pydantic_types import HexBytes
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
-from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
+from pydantic import ConfigDict, model_validator
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
@@ -109,9 +109,7 @@ class FoundryNetworkConfig(PluginConfig):
     Set a block time to allow mining to happen on an interval
     rather than only when a new transaction is submitted.
     """
-
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 def _call(*args):
@@ -532,7 +530,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             if original_code:
                 self.set_code(sender, "")
 
-            txn_dict = txn.dict()
+            txn_dict = txn.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):
                 txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
@@ -576,7 +574,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
 
         if receipt.failed:
-            txn_dict = receipt.transaction.dict()
+            txn_dict = receipt.transaction.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):
                 txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
@@ -708,7 +706,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
         raw_trace_list = self._make_request("trace_transaction", [txn_hash])
-        trace_list = ParityTraceList.parse_obj(raw_trace_list)
+        trace_list = ParityTraceList.model_validate(raw_trace_list)
 
         if not trace_list:
             raise FoundryProviderError(f"No trace found for transaction '{txn_hash}'")
@@ -859,7 +857,8 @@ class FoundryForkProvider(FoundryProvider):
     to use as your archive node.
     """
 
-    @root_validator()
+    @model_validator(mode="before")
+    @classmethod
     def set_upstream_provider(cls, value):
         network = value["network"]
         adhoc_settings = value.get("provider_settings", {}).get("fork", {})

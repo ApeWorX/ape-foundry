@@ -1,7 +1,7 @@
 from typing import Union
 
+from eth_pydantic_types import HexBytes
 from eth_utils import to_bytes, to_hex
-from ethpm_types import HexBytes
 
 
 # TODO: Upstream to ape core

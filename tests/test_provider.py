@@ -8,7 +8,7 @@ from ape.exceptions import ContractLogicError
 from ape.types import CallTreeNode, TraceFrame
 from eth_utils import to_int
 from evm_trace import CallType
-from ethpm_types import HexBytes
+from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID

@@ -74,9 +74,6 @@ class FoundryForkConfig(PluginConfig):
 
 
 class FoundryNetworkConfig(PluginConfig):
-    port: Optional[Union[int, Literal["auto"]]] = DEFAULT_PORT
-    """Deprecated. Use ``host`` config."""
-
     host: Optional[Union[str, Literal["auto"]]] = None
     """The host address or ``"auto"`` to use localhost with a random port (with attempts)."""
 
@@ -263,24 +260,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         Start the foundry process and verify it's up and accepting connections.
         **NOTE**: Must set port before calling 'super().connect()'.
         """
-
-        warning = "`port` setting is deprecated. Please use `host` key that includes the port."
-
-        if self.settings.port != DEFAULT_PORT and self.settings.host is not None:
-            raise FoundryProviderError(
-                "Cannot use deprecated `port` field with `host`. "
-                "Place `port` at end of `host` instead."
-            )
-
-        elif self.settings.port != DEFAULT_PORT:
-            # We only get here if the user configured a port without a host,
-            # the old way of doing it. TODO: Can remove after 0.7.
-            logger.warning(warning)
-            if self.settings.port not in (None, "auto"):
-                self._host = f"http://127.0.0.1:{self.settings.port}"
-            else:
-                # This will trigger selecting a random port on localhost and trying.
-                self._host = "auto"
 
         if "APE_FOUNDRY_HOST" in os.environ:
             self._host = os.environ["APE_FOUNDRY_HOST"]

@@ -247,15 +247,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._make_request("anvil_getAutomine", [])
 
     @property
-    def gas_price(self) -> int:
-        # TODO: Remove this once Ape > 0.6.13
-        result = super().gas_price
-        if isinstance(result, str) and is_0x_prefixed(result):
-            return int(result, 16)
-
-        return result
-
-    @property
     def settings(self) -> FoundryNetworkConfig:
         return cast(FoundryNetworkConfig, super().settings)
 

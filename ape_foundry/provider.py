@@ -38,7 +38,7 @@ from ape.types import (
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
 from ape_test import Config as TestConfig
-from eth_pydantic_types import HexBytes
+from eth_pydantic_types import HashBytes32, HexBytes
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from evm_trace import CallType, ParityTraceList
@@ -59,7 +59,6 @@ from yarl import URL
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
-from .utils import to_bytes32
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
@@ -784,7 +783,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_storage(self, address: AddressType, slot: int, value: HexBytes):
         self._make_request(
             "anvil_setStorageAt",
-            [address, to_bytes32(slot).hex(), to_bytes32(value).hex()],
+            [
+                address,
+                HashBytes32.__eth_pydantic_validate__(slot).hex(),
+                HashBytes32.__eth_pydantic_validate__(value).hex(),
+            ],
         )
 
     def _eth_call(self, arguments: List) -> HexBytes:

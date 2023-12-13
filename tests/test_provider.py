@@ -190,9 +190,9 @@ def test_set_code(connected_provider, contract_container, owner):
 
 def test_set_storage(connected_provider, contract_container, owner):
     contract = contract_container.deploy(sender=owner)
-    assert to_int(connected_provider.get_storage_at(contract.address, "0x2b5e3af16b1880000")) == 0
+    assert to_int(connected_provider.get_storage(contract.address, "0x2b5e3af16b1880000")) == 0
     connected_provider.set_storage(contract.address, "0x2b5e3af16b1880000", "0x1")
-    assert to_int(connected_provider.get_storage_at(contract.address, "0x2b5e3af16b1880000")) == 1
+    assert to_int(connected_provider.get_storage(contract.address, "0x2b5e3af16b1880000")) == 1
 
 
 def test_return_value(connected_provider, contract_instance, owner):

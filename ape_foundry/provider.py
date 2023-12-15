@@ -37,7 +37,7 @@ from ape.types import (
 )
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
-from ape_test import Config as TestConfig
+from ape_test import ApeTestConfig
 from eth_pydantic_types import HashBytes32, HexBytes
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
@@ -235,8 +235,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._web3 is not None
 
     @cached_property
-    def _test_config(self) -> TestConfig:
-        return cast(TestConfig, self.config_manager.get_config("test"))
+    def _test_config(self) -> ApeTestConfig:
+        return cast(ApeTestConfig, self.config_manager.get_config("test"))
 
     @property
     def auto_mine(self) -> bool:
@@ -423,7 +423,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--accounts",
             f"{self.number_of_accounts}",
             "--derivation-path",
-            "m/44'/60'/0'",
+            f"{self.test_config.hd_path.replace('{}', '0')}",
             "--steps-tracing",
             "--block-base-fee-per-gas",
             f"{self.settings.base_fee}",

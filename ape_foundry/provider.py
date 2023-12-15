@@ -423,7 +423,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--accounts",
             f"{self.number_of_accounts}",
             "--derivation-path",
-            f"{self.test_config.hd_path.replace('{}', '0')}",
+            f"{self.test_config.hd_path}",
             "--steps-tracing",
             "--block-base-fee-per-gas",
             f"{self.settings.base_fee}",

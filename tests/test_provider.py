@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pytest
 from ape.api.accounts import ImpersonatedAccount
-from ape.exceptions import ContractLogicError
+from ape.exceptions import ContractLogicError, TransactionError
 from ape.types import CallTreeNode, TraceFrame
+from ape_ethereum.transactions import TransactionStatusEnum
+from eth_pydantic_types import HashBytes32
 from eth_utils import to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
@@ -313,3 +315,46 @@ def test_remote_host_using_env_var(temp_config, networks, no_anvil_bin):
             del os.environ["APE_FOUNDRY_HOST"]
         else:
             os.environ["APE_FOUNDRY_HOST"] = original
+
+
+def test_send_transaction_when_no_error_and_receipt_fails(
+    mocker, connected_provider, owner, vyper_contract_instance
+):
+    mock_web3 = mocker.MagicMock()
+    mock_transaction = mocker.MagicMock()
+    mock_transaction.required_confirmations = 0
+    mock_transaction.sender = owner.address
+
+    start_web3 = connected_provider._web3
+    connected_provider._web3 = mock_web3
+
+    try:
+        # NOTE: Value is meaningless.
+        tx_hash = HashBytes32.__eth_pydantic_validate__(123**36)
+
+        # Sending tx "works" meaning no vm error.
+        mock_web3.eth.send_raw_transaction.return_value = tx_hash
+
+        # Getting a receipt "works", but you get a failed one.
+        receipt_data = {
+            "failed": True,
+            "blockNumber": 0,
+            "txnHash": tx_hash.hex(),
+            "status": TransactionStatusEnum.FAILING.value,
+            "sender": owner.address,
+            "receiver": vyper_contract_instance.address,
+            "input": b"",
+            "gasUsed": 123,
+            "gasLimit": 100,
+        }
+        mock_web3.eth.wait_for_transaction_receipt.return_value = receipt_data
+
+        # Attempting to replay the tx does not produce any error.
+        mock_web3.eth.call.return_value = HexBytes("")
+
+        # Execute test.
+        with pytest.raises(TransactionError):
+            connected_provider.send_transaction(mock_transaction)
+
+    finally:
+        connected_provider._web3 = start_web3

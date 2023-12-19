@@ -1,7 +1,7 @@
 LOCAL_TRACE = r"""
 Call trace for '0x([A-Fa-f0-9]{64})'
 tx\.origin=0x[a-fA-F0-9]{40}
-ContractA\.methodWithoutArguments\(\) -> 0x00\.\.5174 \[\d+ gas\]
+ContractA\.methodWithoutArguments\(\) -> 0x00\.\.93bc \[\d+ gas\]
 ├── SYMBOL\.supercluster\(x=234444\) -> \[
 │       \[23523523235235, 11111111111, 234444\],
 │       \[

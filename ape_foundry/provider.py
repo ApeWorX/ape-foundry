@@ -8,7 +8,6 @@ from pathlib import Path
 from subprocess import PIPE, call
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
 
-from ape._pydantic_compat import root_validator
 from ape.api import (
     BlockAPI,
     ForkedNetworkAPI,
@@ -17,7 +16,6 @@ from ape.api import (
     SubprocessProvider,
     TestProviderAPI,
     TransactionAPI,
-    Web3Provider,
 )
 from ape.exceptions import (
     APINotImplementedError,
@@ -38,13 +36,16 @@ from ape.types import (
     TraceFrame,
 )
 from ape.utils import cached_property
-from ape_test import Config as TestConfig
+from ape_ethereum.provider import Web3Provider
+from ape_test import ApeTestConfig
+from eth_pydantic_types import HashBytes32, HexBytes
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
-from ethpm_types import HexBytes
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
+from pydantic import model_validator
+from pydantic_settings import SettingsConfigDict
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
@@ -58,7 +59,6 @@ from yarl import URL
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
 
 from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
-from .utils import to_bytes32
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
@@ -73,9 +73,6 @@ class FoundryForkConfig(PluginConfig):
 
 
 class FoundryNetworkConfig(PluginConfig):
-    port: Optional[Union[int, Literal["auto"]]] = DEFAULT_PORT
-    """Deprecated. Use ``host`` config."""
-
     host: Optional[Union[str, Literal["auto"]]] = None
     """The host address or ``"auto"`` to use localhost with a random port (with attempts)."""
 
@@ -109,9 +106,7 @@ class FoundryNetworkConfig(PluginConfig):
     Set a block time to allow mining to happen on an interval
     rather than only when a new transaction is submitted.
     """
-
-    class Config:
-        extra = "allow"
+    model_config = SettingsConfigDict(extra="allow")
 
 
 def _call(*args):
@@ -240,21 +235,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._web3 is not None
 
     @cached_property
-    def _test_config(self) -> TestConfig:
-        return cast(TestConfig, self.config_manager.get_config("test"))
+    def _test_config(self) -> ApeTestConfig:
+        return cast(ApeTestConfig, self.config_manager.get_config("test"))
 
     @property
     def auto_mine(self) -> bool:
         return self._make_request("anvil_getAutomine", [])
-
-    @property
-    def gas_price(self) -> int:
-        # TODO: Remove this once Ape > 0.6.13
-        result = super().gas_price
-        if isinstance(result, str) and is_0x_prefixed(result):
-            return int(result, 16)
-
-        return result
 
     @property
     def settings(self) -> FoundryNetworkConfig:
@@ -273,24 +259,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         Start the foundry process and verify it's up and accepting connections.
         **NOTE**: Must set port before calling 'super().connect()'.
         """
-
-        warning = "`port` setting is deprecated. Please use `host` key that includes the port."
-
-        if self.settings.port != DEFAULT_PORT and self.settings.host is not None:
-            raise FoundryProviderError(
-                "Cannot use deprecated `port` field with `host`. "
-                "Place `port` at end of `host` instead."
-            )
-
-        elif self.settings.port != DEFAULT_PORT:
-            # We only get here if the user configured a port without a host,
-            # the old way of doing it. TODO: Can remove after 0.7.
-            logger.warning(warning)
-            if self.settings.port not in (None, "auto"):
-                self._host = f"http://127.0.0.1:{self.settings.port}"
-            else:
-                # This will trigger selecting a random port on localhost and trying.
-                self._host = "auto"
 
         if "APE_FOUNDRY_HOST" in os.environ:
             self._host = os.environ["APE_FOUNDRY_HOST"]
@@ -455,7 +423,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--accounts",
             f"{self.number_of_accounts}",
             "--derivation-path",
-            "m/44'/60'/0'",
+            f"{self.test_config.hd_path}",
             "--steps-tracing",
             "--block-base-fee-per-gas",
             f"{self.settings.base_fee}",
@@ -532,7 +500,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             if original_code:
                 self.set_code(sender, "")
 
-            txn_dict = txn.dict()
+            txn_dict = txn.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):
                 txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
@@ -576,7 +544,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
 
         if receipt.failed:
-            txn_dict = receipt.transaction.dict()
+            txn_dict = receipt.transaction.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):
                 txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
@@ -597,7 +565,17 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.chain_manager.history.append(receipt)
         return receipt
 
-    def send_call(self, txn: TransactionAPI, **kwargs: Any) -> bytes:
+    def send_call(
+        self,
+        txn: TransactionAPI,
+        block_id: Optional[BlockID] = None,
+        state: Optional[Dict] = None,
+        **kwargs,
+    ) -> HexBytes:
+        if block_id is not None:
+            kwargs["block_identifier"] = block_id
+        if state is not None:
+            kwargs["state_override"] = state
         skip_trace = kwargs.pop("skip_trace", False)
         arguments = self._prepare_call(txn, **kwargs)
 
@@ -684,7 +662,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         trace_data = result.get("structLogs", [])
         return result, (EvmTraceFrame(**f) for f in trace_data)
 
-    def get_balance(self, address: str) -> int:
+    def get_balance(self, address: AddressType, block_id: Optional[BlockID] = None) -> int:
         if hasattr(address, "address"):
             address = address.address
 
@@ -708,7 +686,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def get_call_tree(self, txn_hash: str) -> CallTreeNode:
         raw_trace_list = self._make_request("trace_transaction", [txn_hash])
-        trace_list = ParityTraceList.parse_obj(raw_trace_list)
+        trace_list = ParityTraceList.model_validate(raw_trace_list)
 
         if not trace_list:
             raise FoundryProviderError(f"No trace found for transaction '{txn_hash}'")
@@ -805,10 +783,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_storage(self, address: AddressType, slot: int, value: HexBytes):
         self._make_request(
             "anvil_setStorageAt",
-            [address, to_bytes32(slot).hex(), to_bytes32(value).hex()],
+            [
+                address,
+                HashBytes32.__eth_pydantic_validate__(slot).hex(),
+                HashBytes32.__eth_pydantic_validate__(value).hex(),
+            ],
         )
 
-    def _eth_call(self, arguments: List) -> bytes:
+    def _eth_call(self, arguments: List) -> HexBytes:
         # Override from Web3Provider because foundry is pickier.
 
         txn_dict = copy(arguments[0])
@@ -859,7 +841,8 @@ class FoundryForkProvider(FoundryProvider):
     to use as your archive node.
     """
 
-    @root_validator()
+    @model_validator(mode="before")
+    @classmethod
     def set_upstream_provider(cls, value):
         network = value["network"]
         adhoc_settings = value.get("provider_settings", {}).get("fork", {})

@@ -36,14 +36,14 @@ This network provider takes additional Foundry-specific configuration options. T
 
 ```yaml
 foundry:
-  port: 8555
+  host: https://127.0.0.1:8555
 ```
 
 To select a random port, use a value of "auto":
 
 ```yaml
 foundry:
-  port: auto
+  host: auto
 ```
 
 This is useful for multiprocessing and starting up multiple providers.

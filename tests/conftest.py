@@ -129,13 +129,28 @@ def contract_type(request, get_contract_type) -> ContractType:
 
 
 @pytest.fixture
+def vyper_contract_type(get_contract_type) -> ContractType:
+    return get_contract_type("vyper_contract")
+
+
+@pytest.fixture
 def contract_container(contract_type) -> ContractContainer:
     return ContractContainer(contract_type=contract_type)
 
 
 @pytest.fixture
+def vyper_contract_container(vyper_contract_type) -> ContractContainer:
+    return ContractContainer(contract_type=vyper_contract_type)
+
+
+@pytest.fixture
 def contract_instance(owner, contract_container, connected_provider):
     return owner.deploy(contract_container)
+
+
+@pytest.fixture
+def vyper_contract_instance(owner, vyper_contract_container, connected_provider):
+    return owner.deploy(vyper_contract_container)
 
 
 @pytest.fixture

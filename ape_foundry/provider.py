@@ -561,6 +561,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 vm_err = self.get_virtual_machine_error(err, txn=receipt)
                 raise vm_err from err
 
+            # If we get here, for some reason the tx-replay did not produce
+            # a VM error.
+            receipt.raise_for_status()
+
         logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
         self.chain_manager.history.append(receipt)
         return receipt

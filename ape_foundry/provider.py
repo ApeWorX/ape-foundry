@@ -18,7 +18,6 @@ from ape.api import (
     TransactionAPI,
 )
 from ape.exceptions import (
-    APINotImplementedError,
     ContractLogicError,
     OutOfGasError,
     SubprocessError,
@@ -90,6 +89,7 @@ class FoundryNetworkConfig(PluginConfig):
     # RPC defaults
     base_fee: int = 0
     priority_fee: int = 0
+    gas_price: int = 0
 
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryForkProvider.
@@ -224,6 +224,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @property
     def priority_fee(self) -> int:
         return self.settings.priority_fee
+
+    @property
+    def gas_price(self) -> int:
+        return self.settings.gas_price
 
     @property
     def is_connected(self) -> bool:
@@ -427,6 +431,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "--steps-tracing",
             "--block-base-fee-per-gas",
             f"{self.settings.base_fee}",
+            "--gas-price",
+            f"{self.settings.gas_price}",
         ]
 
         if not self.settings.auto_mine:
@@ -496,10 +502,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # Allow for an unsigned transaction
             sender = cast(AddressType, sender)  # We know it's checksummed at this point.
             txn = self.prepare_transaction(txn)
-            original_code = HexBytes(self.get_code(sender))
-            if original_code:
-                self.set_code(sender, "")
-
             txn_dict = txn.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):
                 txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
@@ -510,9 +512,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             except ValueError as err:
                 raise self.get_virtual_machine_error(err, txn=txn) from err
 
-            finally:
-                if original_code:
-                    self.set_code(sender, original_code.hex())
         else:
             try:
                 txn_hash = self.web3.eth.send_raw_transaction(txn.serialize_transaction())
@@ -921,9 +920,9 @@ class FoundryForkProvider(FoundryProvider):
     @property
     def upstream_provider_name(self) -> str:
         if upstream_name := self._fork_config.upstream_provider:
-            self.forked_network.network_config.upstream_provider = upstream_name
+            self._fork_config.upstream_provider = upstream_name
 
-        return self.forked_network.network_config.upstream_provider
+        return self.forked_network.upstream_provider.name
 
     @property
     def fork_url(self) -> str:
@@ -981,16 +980,6 @@ class FoundryForkProvider(FoundryProvider):
         if block_number is not None:
             forking_params["blockNumber"] = block_number
 
+        # # Rest the fork
         result = self._make_request("anvil_reset", [{"forking": forking_params}])
-
-        try:
-            base_fee = self.base_fee
-        except APINotImplementedError:
-            base_fee = None
-            logger.warning("base_fee not found in block - base fee may not be reset.")
-
-        # reset next block base fee to that of new chain head if can
-        if base_fee is not None:
-            self._make_request("anvil_setNextBlockBaseFeePerGas", [base_fee])
-
         return result

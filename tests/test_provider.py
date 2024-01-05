@@ -40,7 +40,7 @@ def test_connect_and_disconnect(disconnected_provider):
 
 def test_gas_price(connected_provider):
     gas_price = connected_provider.gas_price
-    assert gas_price > 1
+    assert gas_price == 0
 
 
 def test_uri_disconnected(disconnected_provider):

@@ -221,13 +221,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         # NOTE: Overriding `Web3Provider.ws_uri` implementation
         return "ws" + self.uri[4:]  # Remove `http` in default URI w/ `ws`
 
-    @property
-    def priority_fee(self) -> int:
-        return self.settings.priority_fee
-
-    @property
-    def gas_price(self) -> int:
-        return self.settings.gas_price
+    #
+    # @property
+    # def priority_fee(self) -> int:
+    #     return self.priority_fee
+    #
+    # @property
+    # def gas_price(self) -> int:
+    #     return self.m
 
     @property
     def is_connected(self) -> bool:

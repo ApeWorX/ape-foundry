@@ -113,6 +113,11 @@ def networks():
     return ape.networks
 
 
+@pytest.fixture(scope="session")
+def ethereum():
+    return ape.networks.ethereum
+
+
 @pytest.fixture
 def get_contract_type():
     def fn(name: str) -> ContractType:
@@ -185,21 +190,26 @@ def not_owner(accounts):
 
 
 @pytest.fixture(scope="session")
-def local_network_api(networks):
-    return networks.ethereum.local
+def local_network(ethereum):
+    return ethereum.local
+
+
+@pytest.fixture(scope="session")
+def mainnet_fork(ethereum):
+    return ethereum.mainnet_fork
 
 
 @pytest.fixture
-def connected_provider(name, networks, local_network_api):
-    with networks.ethereum.local.use_provider(name) as provider:
+def connected_provider(name, ethereum, local_network):
+    with ethereum.local.use_provider(name) as provider:
         yield provider
 
 
 @pytest.fixture(scope="session")
-def disconnected_provider(name, local_network_api):
+def disconnected_provider(name, local_network):
     return FoundryProvider(
         name=name,
-        network=local_network_api,
+        network=local_network,
         request_header={},
         data_folder=Path("."),
         provider_settings={},
@@ -212,8 +222,8 @@ def mainnet_fork_port():
 
 
 @pytest.fixture
-def mainnet_fork_provider(name, networks, mainnet_fork_port):
-    with networks.ethereum.mainnet_fork.use_provider(
+def mainnet_fork_provider(name, mainnet_fork, mainnet_fork_port):
+    with mainnet_fork.use_provider(
         name, provider_settings={"host": f"http://127.0.0.1:{mainnet_fork_port}"}
     ) as provider:
         yield provider
@@ -225,8 +235,8 @@ def goerli_fork_port():
 
 
 @pytest.fixture
-def goerli_fork_provider(name, networks, goerli_fork_port):
-    with networks.ethereum.goerli_fork.use_provider(
+def goerli_fork_provider(name, ethereum, goerli_fork_port):
+    with ethereum.goerli_fork.use_provider(
         name, provider_settings={"host": f"http://127.0.0.1:{goerli_fork_port}"}
     ) as provider:
         yield provider

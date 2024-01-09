@@ -18,7 +18,7 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
 
 @pytest.mark.fork
 def test_multiple_providers(
-    name, networks, connected_provider, mainnet_fork_port, goerli_fork_port
+    name, networks, ethereum, connected_provider, mainnet_fork_port, goerli_fork_port
 ):
     default_host = "http://127.0.0.1:8545"
     assert networks.active_provider.name == name
@@ -26,17 +26,13 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
     mainnet_fork_host = f"http://127.0.0.1:{mainnet_fork_port}"
 
-    with networks.ethereum.mainnet_fork.use_provider(
-        name, provider_settings={"host": mainnet_fork_host}
-    ):
+    with ethereum.mainnet_fork.use_provider(name, provider_settings={"host": mainnet_fork_host}):
         assert networks.active_provider.name == name
         assert networks.active_provider.network.name == "mainnet-fork"
         assert networks.active_provider.uri == mainnet_fork_host
         goerli_fork_host = f"http://127.0.0.1:{goerli_fork_port}"
 
-        with networks.ethereum.goerli_fork.use_provider(
-            name, provider_settings={"host": goerli_fork_host}
-        ):
+        with ethereum.goerli_fork.use_provider(name, provider_settings={"host": goerli_fork_host}):
             assert networks.active_provider.name == name
             assert networks.active_provider.network.name == "goerli-fork"
             assert networks.active_provider.uri == goerli_fork_host

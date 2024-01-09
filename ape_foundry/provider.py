@@ -221,15 +221,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         # NOTE: Overriding `Web3Provider.ws_uri` implementation
         return "ws" + self.uri[4:]  # Remove `http` in default URI w/ `ws`
 
-    #
-    # @property
-    # def priority_fee(self) -> int:
-    #     return self.priority_fee
-    #
-    # @property
-    # def gas_price(self) -> int:
-    #     return self.m
-
     @property
     def is_connected(self) -> bool:
         if self._host in ("auto", None):
@@ -238,6 +229,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         self._set_web3()
         return self._web3 is not None
+
+    @property
+    def gas_price(self) -> int:
+        if self.process is not None:
+            # NOTE: Workaround for bug where RPC does not honor CLI flag.
+            return self.settings.gas_price
+
+        # Not managing node so must use RPC.
+        return self.web3.eth.gas_price
 
     @cached_property
     def _test_config(self) -> ApeTestConfig:
@@ -490,6 +490,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if address in self.account_manager.test_accounts._impersonated_accounts:
             del self.account_manager.test_accounts._impersonated_accounts[address]
 
+    def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
+        if txn.sender and txn.sender in self.unlocked_accounts:
+            balance = self.get_balance(txn.sender)
+            if balance == 0:
+                # Hack to allow impersonating contracts without funds easier.
+                self.set_balance(txn.sender, self.conversion_manager.convert("10000 ether", int))
+
+        return super().prepare_transaction(txn)
+
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation
@@ -501,7 +510,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if sender and sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
-            sender = cast(AddressType, sender)  # We know it's checksummed at this point.
             txn = self.prepare_transaction(txn)
             txn_dict = txn.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):

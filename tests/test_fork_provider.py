@@ -199,3 +199,26 @@ def test_provider_settings(networks, network, port):
 
     with provider_ctx as provider:
         assert provider.fork_block_number == expected_block_number
+
+
+def test_contract_interaction(mainnet_fork_provider, owner, mainnet_fork_contract_instance, mocker):
+    # Spy on the estimate_gas RPC method.
+    estimate_gas_spy = mocker.spy(mainnet_fork_provider.web3.eth, "estimate_gas")
+
+    # Check what max gas is before transacting.
+    max_gas = mainnet_fork_provider.max_gas
+
+    # Invoke a method from a contract via transacting.
+    receipt = mainnet_fork_contract_instance.setNumber(102, sender=owner)
+
+    # Verify values from the receipt.
+    assert not receipt.failed
+    assert receipt.receiver == mainnet_fork_contract_instance.address
+    assert receipt.gas_used < receipt.gas_limit
+    assert receipt.gas_limit == max_gas
+
+    # Show contract state changed.
+    assert mainnet_fork_contract_instance.myNumber() == 102
+
+    # Verify the estimate gas RPC was not used (since we are using max_gas).
+    assert estimate_gas_spy.call_count == 0

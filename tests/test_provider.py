@@ -142,9 +142,27 @@ def test_request_timeout(connected_provider, config):
             assert connected_provider.timeout == 30
 
 
-def test_send_transaction(contract_instance, owner):
-    contract_instance.setNumber(10, sender=owner)
-    assert contract_instance.myNumber() == 10
+def test_contract_interaction(connected_provider, owner, contract_instance, mocker):
+    # Spy on the estimate_gas RPC method.
+    estimate_gas_spy = mocker.spy(connected_provider.web3.eth, "estimate_gas")
+
+    # Check what max gas is before transacting.
+    max_gas = connected_provider.max_gas
+
+    # Invoke a method from a contract via transacting.
+    receipt = contract_instance.setNumber(102, sender=owner)
+
+    # Verify values from the receipt.
+    assert not receipt.failed
+    assert receipt.receiver == contract_instance.address
+    assert receipt.gas_used < receipt.gas_limit
+    assert receipt.gas_limit == max_gas
+
+    # Show contract state changed.
+    assert contract_instance.myNumber() == 102
+
+    # Verify the estimate gas RPC was not used (since we are using max_gas).
+    assert estimate_gas_spy.call_count == 0
 
 
 def test_revert(sender, contract_instance):

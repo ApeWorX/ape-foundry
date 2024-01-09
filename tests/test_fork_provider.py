@@ -201,6 +201,7 @@ def test_provider_settings(networks, network, port):
         assert provider.fork_block_number == expected_block_number
 
 
+@pytest.mark.fork
 def test_contract_interaction(mainnet_fork_provider, owner, mainnet_fork_contract_instance, mocker):
     # Spy on the estimate_gas RPC method.
     estimate_gas_spy = mocker.spy(mainnet_fork_provider.web3.eth, "estimate_gas")

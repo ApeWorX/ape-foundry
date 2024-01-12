@@ -222,14 +222,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return "ws" + self.uri[4:]  # Remove `http` in default URI w/ `ws`
 
     @property
-    def priority_fee(self) -> int:
-        return self.settings.priority_fee
-
-    @property
-    def gas_price(self) -> int:
-        return self.settings.gas_price
-
-    @property
     def is_connected(self) -> bool:
         if self._host in ("auto", None):
             # Hasn't tried yet.
@@ -237,6 +229,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         self._set_web3()
         return self._web3 is not None
+
+    @property
+    def gas_price(self) -> int:
+        if self.process is not None:
+            # NOTE: Workaround for bug where RPC does not honor CLI flag.
+            return self.settings.gas_price
+
+        # Not managing node so must use RPC.
+        return self.web3.eth.gas_price
 
     @cached_property
     def _test_config(self) -> ApeTestConfig:
@@ -500,7 +501,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if sender and sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
-            sender = cast(AddressType, sender)  # We know it's checksummed at this point.
             txn = self.prepare_transaction(txn)
             txn_dict = txn.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):

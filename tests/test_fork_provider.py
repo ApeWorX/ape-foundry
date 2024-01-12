@@ -18,7 +18,7 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
 
 @pytest.mark.fork
 def test_multiple_providers(
-    name, networks, connected_provider, mainnet_fork_port, goerli_fork_port
+    name, networks, ethereum, connected_provider, mainnet_fork_port, goerli_fork_port
 ):
     default_host = "http://127.0.0.1:8545"
     assert networks.active_provider.name == name
@@ -26,17 +26,13 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
     mainnet_fork_host = f"http://127.0.0.1:{mainnet_fork_port}"
 
-    with networks.ethereum.mainnet_fork.use_provider(
-        name, provider_settings={"host": mainnet_fork_host}
-    ):
+    with ethereum.mainnet_fork.use_provider(name, provider_settings={"host": mainnet_fork_host}):
         assert networks.active_provider.name == name
         assert networks.active_provider.network.name == "mainnet-fork"
         assert networks.active_provider.uri == mainnet_fork_host
         goerli_fork_host = f"http://127.0.0.1:{goerli_fork_port}"
 
-        with networks.ethereum.goerli_fork.use_provider(
-            name, provider_settings={"host": goerli_fork_host}
-        ):
+        with ethereum.goerli_fork.use_provider(name, provider_settings={"host": goerli_fork_host}):
             assert networks.active_provider.name == name
             assert networks.active_provider.network.name == "goerli-fork"
             assert networks.active_provider.uri == goerli_fork_host
@@ -203,3 +199,27 @@ def test_provider_settings(networks, network, port):
 
     with provider_ctx as provider:
         assert provider.fork_block_number == expected_block_number
+
+
+@pytest.mark.fork
+def test_contract_interaction(mainnet_fork_provider, owner, mainnet_fork_contract_instance, mocker):
+    # Spy on the estimate_gas RPC method.
+    estimate_gas_spy = mocker.spy(mainnet_fork_provider.web3.eth, "estimate_gas")
+
+    # Check what max gas is before transacting.
+    max_gas = mainnet_fork_provider.max_gas
+
+    # Invoke a method from a contract via transacting.
+    receipt = mainnet_fork_contract_instance.setNumber(102, sender=owner)
+
+    # Verify values from the receipt.
+    assert not receipt.failed
+    assert receipt.receiver == mainnet_fork_contract_instance.address
+    assert receipt.gas_used < receipt.gas_limit
+    assert receipt.gas_limit == max_gas
+
+    # Show contract state changed.
+    assert mainnet_fork_contract_instance.myNumber() == 102
+
+    # Verify the estimate gas RPC was not used (since we are using max_gas).
+    assert estimate_gas_spy.call_count == 0

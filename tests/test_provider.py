@@ -6,7 +6,7 @@ import pytest
 from ape.api.accounts import ImpersonatedAccount
 from ape.exceptions import ContractLogicError, TransactionError
 from ape.types import CallTreeNode, TraceFrame
-from ape_ethereum.transactions import TransactionStatusEnum
+from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HashBytes32
 from eth_utils import to_int
 from evm_trace import CallType
@@ -107,8 +107,9 @@ def test_unlock_account(connected_provider, contract_a, accounts):
     assert isinstance(acct, ImpersonatedAccount)
 
     # Ensure can transact.
-    receipt = contract_a.methodWithoutArguments(sender=acct)
-    assert not receipt.failed
+    # NOTE: Using type 0 to avoid needing to set a balance.
+    receipt_0 = contract_a.methodWithoutArguments(sender=acct, type=0)
+    assert not receipt_0.failed
 
 
 def test_get_transaction_trace(connected_provider, contract_instance, owner):
@@ -142,9 +143,27 @@ def test_request_timeout(connected_provider, config):
             assert connected_provider.timeout == 30
 
 
-def test_send_transaction(contract_instance, owner):
-    contract_instance.setNumber(10, sender=owner)
-    assert contract_instance.myNumber() == 10
+def test_contract_interaction(connected_provider, owner, contract_instance, mocker):
+    # Spy on the estimate_gas RPC method.
+    estimate_gas_spy = mocker.spy(connected_provider.web3.eth, "estimate_gas")
+
+    # Check what max gas is before transacting.
+    max_gas = connected_provider.max_gas
+
+    # Invoke a method from a contract via transacting.
+    receipt = contract_instance.setNumber(102, sender=owner)
+
+    # Verify values from the receipt.
+    assert not receipt.failed
+    assert receipt.receiver == contract_instance.address
+    assert receipt.gas_used < receipt.gas_limit
+    assert receipt.gas_limit == max_gas
+
+    # Show contract state changed.
+    assert contract_instance.myNumber() == 102
+
+    # Verify the estimate gas RPC was not used (since we are using max_gas).
+    assert estimate_gas_spy.call_count == 0
 
 
 def test_revert(sender, contract_instance):
@@ -230,10 +249,10 @@ def test_revert_error_using_impersonated_account(error_contract, accounts, conne
 
 
 @pytest.mark.parametrize("host", ("https://example.com", "example.com"))
-def test_host(temp_config, networks, host):
+def test_host(temp_config, local_network, host):
     data = {"foundry": {"host": host}}
     with temp_config(data):
-        provider = networks.ethereum.local.get_provider("foundry")
+        provider = local_network.get_provider("foundry")
         assert provider.uri == "https://example.com"
 
 
@@ -266,37 +285,37 @@ def test_get_virtual_machine_error_from_contract_logic_message_includes_base_err
     assert actual.base_err == exception
 
 
-def test_no_mining(temp_config, networks, connected_provider):
+def test_no_mining(temp_config, local_network, connected_provider):
     assert "--no-mining" not in connected_provider.build_command()
     data = {"foundry": {"auto_mine": "false"}}
     with temp_config(data):
-        provider = networks.ethereum.local.get_provider("foundry")
+        provider = local_network.get_provider("foundry")
         cmd = provider.build_command()
         assert "--no-mining" in cmd
 
 
-def test_block_time(temp_config, networks, connected_provider):
+def test_block_time(temp_config, local_network, connected_provider):
     assert "--block-time" not in connected_provider.build_command()
     data = {"foundry": {"block_time": 10}}
     with temp_config(data):
-        provider = networks.ethereum.local.get_provider("foundry")
+        provider = local_network.get_provider("foundry")
         cmd = provider.build_command()
         assert "--block-time" in cmd
         assert "10" in cmd
 
 
-def test_remote_host(temp_config, networks, no_anvil_bin):
+def test_remote_host(temp_config, local_network, no_anvil_bin):
     data = {"foundry": {"host": "https://example.com"}}
     with temp_config(data):
         with pytest.raises(
             FoundryProviderError,
             match=r"Failed to connect to remote Anvil node at 'https://example.com'\.",
         ):
-            with networks.ethereum.local.use_provider("foundry"):
+            with local_network.use_provider("foundry"):
                 assert True
 
 
-def test_remote_host_using_env_var(temp_config, networks, no_anvil_bin):
+def test_remote_host_using_env_var(temp_config, local_network, no_anvil_bin):
     original = os.environ.get("APE_FOUNDRY_HOST")
     os.environ["APE_FOUNDRY_HOST"] = "https://example2.com"
 
@@ -305,7 +324,7 @@ def test_remote_host_using_env_var(temp_config, networks, no_anvil_bin):
             FoundryProviderError,
             match=r"Failed to connect to remote Anvil node at 'https://example2.com'\.",
         ):
-            with networks.ethereum.local.use_provider("foundry") as provider:
+            with local_network.use_provider("foundry") as provider:
                 # It shouldn't actually get to the line below,
                 # but in case it does, this is a helpful debug line.
                 assert provider.uri == os.environ["APE_FOUNDRY_HOST"], "env var not setting."
@@ -358,3 +377,14 @@ def test_send_transaction_when_no_error_and_receipt_fails(
 
     finally:
         connected_provider._web3 = start_web3
+
+
+@pytest.mark.parametrize("tx_type", TransactionType)
+def test_prepare_tx_with_max_gas(tx_type, connected_provider, ethereum, owner):
+    tx = ethereum.create_transaction(type=tx_type.value, sender=owner.address)
+    tx.gas_limit = None  # Undo set from validator
+    assert tx.gas_limit is None, "Test setup failed - couldn't clear tx gas limit."
+
+    # NOTE: The local network by default uses max_gas.
+    actual = connected_provider.prepare_transaction(tx)
+    assert actual.gas_limit == connected_provider.max_gas

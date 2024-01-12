@@ -491,7 +491,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             del self.account_manager.test_accounts._impersonated_accounts[address]
 
     def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        if txn.sender and txn.sender in self.unlocked_accounts:
+        if txn.sender and txn.sender in self.unlocked_accounts and txn.type == 2:
             balance = self.get_balance(txn.sender)
             if balance == 0:
                 # Hack to allow impersonating contracts without funds easier.

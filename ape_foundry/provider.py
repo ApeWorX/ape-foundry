@@ -490,15 +490,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if address in self.account_manager.test_accounts._impersonated_accounts:
             del self.account_manager.test_accounts._impersonated_accounts[address]
 
-    def prepare_transaction(self, txn: TransactionAPI) -> TransactionAPI:
-        if txn.sender and txn.sender in self.unlocked_accounts and txn.type == 2:
-            balance = self.get_balance(txn.sender)
-            if balance == 0:
-                # Hack to allow impersonating contracts without funds easier.
-                self.set_balance(txn.sender, self.conversion_manager.convert("10000 ether", int))
-
-        return super().prepare_transaction(txn)
-
     def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
         """
         Creates a new message call transaction or a contract creation

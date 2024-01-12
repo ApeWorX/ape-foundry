@@ -107,11 +107,9 @@ def test_unlock_account(connected_provider, contract_a, accounts):
     assert isinstance(acct, ImpersonatedAccount)
 
     # Ensure can transact.
+    # NOTE: Using type 0 to avoid needing to set a balance.
     receipt_0 = contract_a.methodWithoutArguments(sender=acct, type=0)
     assert not receipt_0.failed
-
-    receipt_2 = contract_a.methodWithoutArguments(sender=acct, type=2)
-    assert not receipt_2.failed
 
 
 def test_get_transaction_trace(connected_provider, contract_instance, owner):

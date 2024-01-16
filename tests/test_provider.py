@@ -3,18 +3,19 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from ape.api import TraceAPI
 from ape.api.accounts import ImpersonatedAccount
 from ape.contracts import ContractContainer
 from ape.exceptions import ContractLogicError, TransactionError
-from ape.types import CallTreeNode, TraceFrame
+from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HashBytes32
-from eth_utils import encode_hex, to_int
+from eth_utils import to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryNetworkConfig, _extract_custom_error
+from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryNetworkConfig
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -73,15 +74,15 @@ def test_mine(connected_provider):
     assert next_block_num > block_num
 
 
-def test_revert_failure(connected_provider):
-    assert connected_provider.revert(0xFFFF) is False
+def test_restore_failure(connected_provider):
+    assert connected_provider.restore(0xFFFF) is False
 
 
 def test_get_balance(connected_provider, owner):
     assert connected_provider.get_balance(owner.address)
 
 
-def test_snapshot_and_revert(connected_provider):
+def test_snapshot_and_restore(connected_provider):
     snap = connected_provider.snapshot()
 
     block_1 = connected_provider.get_block("latest")
@@ -90,7 +91,7 @@ def test_snapshot_and_revert(connected_provider):
     assert block_2.number > block_1.number
     assert block_1.hash != block_2.hash
 
-    connected_provider.revert(snap)
+    connected_provider.restore(snap)
     block_3 = connected_provider.get_block("latest")
     assert block_1.number == block_3.number
     assert block_1.hash == block_3.hash
@@ -102,9 +103,8 @@ def test_snapshot_and_revert(connected_provider):
         {},  # NO KWARGS CASE: Should default to type 2
         {"type": 0},
         {"type": 0, "gas_price": 0},
-        # TODO: Uncomment after ape 0.7.5 is released
-        # {"type": 1},
-        # {"type": 1, "gas_price": 0},
+        {"type": 1},
+        {"type": 1, "gas_price": 0},
         {"type": 2},
         {"type": 2, "max_priority_fee": 0},
         {"type": 2, "base_fee": 0, "max_priority_fee": 0},
@@ -137,19 +137,21 @@ def test_unlock_account(connected_provider, contract_a, accounts, tx_kwargs):
 def test_get_transaction_trace(connected_provider, contract_instance, owner):
     receipt = contract_instance.setNumber(10, sender=owner)
 
+    actual = connected_provider.get_transaction_trace(receipt.txn_hash)
+    assert isinstance(actual, TraceAPI), f"{type(actual)}"
+    assert actual == receipt.trace
+
     # Indirectly calls `connected_provider.get_transaction_trace()`
-    frame_data = list(receipt.trace)
-    assert frame_data
-    for frame in frame_data:
-        assert isinstance(frame, TraceFrame)
+    assert isinstance(receipt.trace, TraceAPI)
 
 
-def test_get_call_tree(connected_provider, sender, receiver):
+def test_get_transaction_trace_call_tree(connected_provider, sender, receiver):
     transfer = sender.transfer(receiver, 1)
-    call_tree = connected_provider.get_call_tree(transfer.txn_hash)
-    assert isinstance(call_tree, CallTreeNode)
-    assert call_tree.call_type == CallType.CALL.value
-    assert repr(call_tree) == "0x70997970C51812dc3A010C7d01b50e0d17dc79C8.0x()"
+    trace = connected_provider.get_transaction_trace(transfer.txn_hash)
+    assert isinstance(trace, Trace)
+    call_tree = trace.get_calltree()
+    assert call_tree.call_type == CallType.CALL
+    assert repr(trace) == "__ETH_transfer__.0x() 1"
 
 
 def test_request_timeout(connected_provider, config):
@@ -451,45 +453,6 @@ def test_disable_block_gas_limit(temp_config, disconnected_provider):
     with temp_config(data):
         cmd = disconnected_provider.build_command()
         assert "--disable-block-gas-limit" in cmd
-
-
-def test_extract_custom_error_trace_given(mocker):
-    provider = mocker.MagicMock()
-    trace = mocker.MagicMock()
-    trace.raw = {"op": "REVERT", "memory": [None, None, None, None, encode_hex("CustomError")]}
-    trace = iter([trace])
-    actual = _extract_custom_error(provider, trace=trace)
-    assert actual.startswith("0x")
-
-
-def test_extract_custom_error_transaction_given(
-    connected_provider, vyper_contract_instance, not_owner
-):
-    with pytest.raises(ContractLogicError) as err:
-        vyper_contract_instance.setNumber(546, sender=not_owner, allow_fail=True)
-
-    actual = _extract_custom_error(connected_provider, txn=err.value.txn)
-    assert actual == ""
-
-
-@pytest.mark.parametrize("tx_hash", ("0x0123", HexBytes("0x0123")))
-def test_extract_custom_error_transaction_given_trace_fails(mocker, tx_hash):
-    provider = mocker.MagicMock()
-    tx = mocker.MagicMock()
-    tx.txn_hash = tx_hash
-    tracker = []
-
-    def trace(txn_hash: str, *args, **kwargs):
-        tracker.append(txn_hash)
-        raise ValueError("Connection failed.")
-
-    provider._get_transaction_trace.side_effect = trace
-
-    actual = _extract_custom_error(provider, txn=tx)
-    assert actual == ""
-
-    # Show failure was tracked
-    assert tracker[0] == HexBytes(tx.txn_hash).hex()
 
 
 def test_fork_config_none():

@@ -3,10 +3,11 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from ape.api import TraceAPI
 from ape.api.accounts import ImpersonatedAccount
 from ape.contracts import ContractContainer
 from ape.exceptions import ContractLogicError, TransactionError
-from ape.types import CallTreeNode, TraceFrame
+from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HashBytes32
 from eth_utils import to_int
@@ -137,19 +138,21 @@ def test_unlock_account(connected_provider, contract_a, accounts, tx_kwargs):
 def test_get_transaction_trace(connected_provider, contract_instance, owner):
     receipt = contract_instance.setNumber(10, sender=owner)
 
+    actual = connected_provider.get_transaction_trace(receipt.txn_hash)
+    assert isinstance(actual, TraceAPI), f"{type(actual)}"
+    assert actual == receipt.trace
+
     # Indirectly calls `connected_provider.get_transaction_trace()`
-    frame_data = list(receipt.trace)
-    assert frame_data
-    for frame in frame_data:
-        assert isinstance(frame, TraceFrame)
+    assert isinstance(receipt.trace, TraceAPI)
 
 
-def test_get_call_tree(connected_provider, sender, receiver):
+def test_get_transaction_trace_call_tree(connected_provider, sender, receiver):
     transfer = sender.transfer(receiver, 1)
-    call_tree = connected_provider.get_call_tree(transfer.txn_hash)
-    assert isinstance(call_tree, CallTreeNode)
-    assert call_tree.call_type == CallType.CALL.value
-    assert repr(call_tree) == "0x70997970C51812dc3A010C7d01b50e0d17dc79C8.0x()"
+    trace = connected_provider.get_transaction_trace(transfer.txn_hash)
+    assert isinstance(trace, Trace)
+    call_tree = trace.get_calltree()
+    assert call_tree.call_type == CallType.CALL
+    assert repr(trace) == "__ETH_transfer__.0x() 1"
 
 
 def test_request_timeout(connected_provider, config):

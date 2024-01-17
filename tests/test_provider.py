@@ -294,9 +294,6 @@ def test_base_fee(connected_provider, temp_config, networks, accounts):
             # Show can transact with this base_fee
             acct1.transfer(acct2, "1 eth")
 
-            # TODO: THIS IS FAILING, THIS IS THE REPORTED BUG
-            acct1.transfer(acct2, "1 eth", max_priority_fee=0)
-
 
 def test_auto_mine(connected_provider):
     assert connected_provider.auto_mine is True

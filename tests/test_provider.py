@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from ape.api.accounts import ImpersonatedAccount
+from ape.contracts import ContractContainer
 from ape.exceptions import ContractLogicError, TransactionError
 from ape.types import CallTreeNode, TraceFrame
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
@@ -95,7 +96,21 @@ def test_snapshot_and_revert(connected_provider):
     assert block_1.hash == block_3.hash
 
 
-def test_unlock_account(connected_provider, contract_a, accounts):
+@pytest.mark.parametrize(
+    "tx_kwargs",
+    [
+        {},  # NO KWARGS CASE: Should default to type 2
+        {"type": 0},
+        {"type": 0, "gas_price": 0},
+        # TODO: Uncomment after ape 0.7.5 is released
+        # {"type": 1},
+        # {"type": 1, "gas_price": 0},
+        {"type": 2},
+        {"type": 2, "max_priority_fee": 0},
+        {"type": 2, "base_fee": 0, "max_priority_fee": 0},
+    ],
+)
+def test_unlock_account(connected_provider, contract_a, accounts, tx_kwargs):
     actual = connected_provider.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
 
@@ -108,7 +123,14 @@ def test_unlock_account(connected_provider, contract_a, accounts):
 
     # Ensure can transact.
     # NOTE: Using type 0 to avoid needing to set a balance.
-    receipt_0 = contract_a.methodWithoutArguments(sender=acct, type=0)
+    acct.balance += 1_000_000_000_000_000_000
+    receipt_0 = contract_a.methodWithoutArguments(sender=acct, **tx_kwargs)
+
+    # Ensure we can deploy.
+    container = ContractContainer(contract_a.contract_type)
+    new_contract = container.deploy(acct, acct, sender=acct)
+    assert new_contract.address != contract_a.address
+
     assert not receipt_0.failed
 
 
@@ -256,8 +278,21 @@ def test_host(temp_config, local_network, host):
         assert provider.uri == "https://example.com"
 
 
-def test_base_fee(connected_provider):
+def test_base_fee(connected_provider, temp_config, networks, accounts):
     assert connected_provider.base_fee == 0
+
+    acct1 = accounts[-1]
+    acct2 = accounts[-2]
+
+    # Show we can se the base-fee.
+    new_base_fee = 1_000_000
+    data = {"foundry": {"base_fee": new_base_fee, "host": "http://127.0.0.1:8555"}}
+    with temp_config(data):
+        with networks.ethereum.local.use_provider("foundry") as provider:
+            assert provider.base_fee == new_base_fee
+
+            # Show can transact with this base_fee
+            acct1.transfer(acct2, "1 eth")
 
 
 def test_auto_mine(connected_provider):
@@ -388,3 +423,15 @@ def test_prepare_tx_with_max_gas(tx_type, connected_provider, ethereum, owner):
     # NOTE: The local network by default uses max_gas.
     actual = connected_provider.prepare_transaction(tx)
     assert actual.gas_limit == connected_provider.max_gas
+
+
+def test_disable_block_gas_limit(temp_config, disconnected_provider):
+    # Ensure it is disabled by default.
+    cmd = disconnected_provider.build_command()
+    assert "--disable-block-gas-limit" not in cmd
+
+    # Show we can enable it.
+    data = {"foundry": {"disable_block_gas_limit": True}}
+    with temp_config(data):
+        cmd = disconnected_provider.build_command()
+        assert "--disable-block-gas-limit" in cmd

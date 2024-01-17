@@ -96,6 +96,11 @@ class FoundryNetworkConfig(PluginConfig):
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
     fork: Dict[str, Dict[str, FoundryForkConfig]] = {}
 
+    """
+    Disable the ``call.gas_limit <= block.gas_limit`` constraint.
+    """
+    disable_block_gas_limit: bool = False
+
     auto_mine: bool = True
     """
     Automatically mine blocks instead of manually doing so.
@@ -441,6 +446,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if self.settings.block_time is not None:
             cmd.extend(("--block-time", f"{self.settings.block_time}"))
+
+        if self.settings.disable_block_gas_limit:
+            cmd.append("--disable-block-gas-limit")
 
         return cmd
 

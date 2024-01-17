@@ -400,3 +400,15 @@ def test_prepare_tx_with_max_gas(tx_type, connected_provider, ethereum, owner):
     # NOTE: The local network by default uses max_gas.
     actual = connected_provider.prepare_transaction(tx)
     assert actual.gas_limit == connected_provider.max_gas
+
+
+def test_disable_block_gas_limit(temp_config, disconnected_provider):
+    # Ensure it is disabled by default.
+    cmd = disconnected_provider.build_command()
+    assert "--disable-block-gas-limit" not in cmd
+
+    # Show we can enable it.
+    data = {"foundry": {"disable_block_gas_limit": True}}
+    with temp_config(data):
+        cmd = disconnected_provider.build_command()
+        assert "--disable-block-gas-limit" in cmd

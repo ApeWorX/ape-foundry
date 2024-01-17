@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from ape.api.accounts import ImpersonatedAccount
+from ape.contracts import ContractContainer
 from ape.exceptions import ContractLogicError, TransactionError
 from ape.types import CallTreeNode, TraceFrame
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
@@ -121,6 +122,12 @@ def test_unlock_account(connected_provider, contract_a, accounts, tx_kwargs):
     # NOTE: Using type 0 to avoid needing to set a balance.
     acct.balance += 1_000_000_000_000_000_000
     receipt_0 = contract_a.methodWithoutArguments(sender=acct, **tx_kwargs)
+
+    # Ensure we can deploy.
+    container = ContractContainer(contract_a.contract_type)
+    new_contract = container.deploy(acct, acct, sender=acct)
+    assert new_contract.address != contract_a.address
+
     assert not receipt_0.failed
 
 
@@ -268,8 +275,24 @@ def test_host(temp_config, local_network, host):
         assert provider.uri == "https://example.com"
 
 
-def test_base_fee(connected_provider):
+def test_base_fee(connected_provider, temp_config, networks, accounts):
     assert connected_provider.base_fee == 0
+
+    acct1 = accounts[-1]
+    acct2 = accounts[-2]
+
+    # Show we can se the base-fee.
+    new_base_fee = 1_000_000
+    data = {"foundry": {"base_fee": new_base_fee, "host": "http://127.0.0.1:8555"}}
+    with temp_config(data):
+        with networks.ethereum.local.use_provider("foundry") as provider:
+            assert provider.base_fee == new_base_fee
+
+            # Show can transact with this base_fee
+            acct1.transfer(acct2, "1 eth")
+
+            # TODO: THIS IS FAILING, THIS IS THE REPORTED BUG
+            acct1.transfer(acct2, "1 eth", max_priority_fee=0)
 
 
 def test_auto_mine(connected_provider):

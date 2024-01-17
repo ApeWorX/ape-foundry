@@ -95,7 +95,8 @@ def test_snapshot_and_revert(connected_provider):
     assert block_1.hash == block_3.hash
 
 
-def test_unlock_account(connected_provider, contract_a, accounts):
+@pytest.mark.parametrize("tx_type", (0, 1, 2))
+def test_unlock_account(connected_provider, contract_a, accounts, tx_type):
     actual = connected_provider.unlock_account(TEST_WALLET_ADDRESS)
     assert actual is True
 
@@ -108,7 +109,8 @@ def test_unlock_account(connected_provider, contract_a, accounts):
 
     # Ensure can transact.
     # NOTE: Using type 0 to avoid needing to set a balance.
-    receipt_0 = contract_a.methodWithoutArguments(sender=acct, type=0)
+    acct.balance += 1_000_000_000_000_000_000
+    receipt_0 = contract_a.methodWithoutArguments(sender=acct, type=tx_type)
     assert not receipt_0.failed
 
 

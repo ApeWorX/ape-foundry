@@ -434,6 +434,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             f"{self.settings.base_fee}",
             "--gas-price",
             f"{self.settings.gas_price}",
+            "--disable-block-gas-limit",
         ]
 
         if not self.settings.auto_mine:

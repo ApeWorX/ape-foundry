@@ -107,8 +107,7 @@ def test_unlock_account(connected_provider, contract_a, accounts):
     assert isinstance(acct, ImpersonatedAccount)
 
     # Ensure can transact.
-    # NOTE: Using type 0 to avoid needing to set a balance.
-    receipt_0 = contract_a.methodWithoutArguments(sender=acct, type=0)
+    receipt_0 = contract_a.methodWithoutArguments(sender=acct)
     assert not receipt_0.failed
 
 

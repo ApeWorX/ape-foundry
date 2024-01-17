@@ -500,7 +500,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             sender = self.conversion_manager.convert(txn.sender, AddressType)
 
         if sender and sender in self.unlocked_accounts:
-            # Allow for an unsigned transaction
+            # Impersonated accounts must use type-0 to avoid unfair
+            # checks in Foundry.
+            txn.type = 0
+
             txn = self.prepare_transaction(txn)
             txn_dict = txn.model_dump(mode="json", by_alias=True)
             if isinstance(txn_dict.get("type"), int):

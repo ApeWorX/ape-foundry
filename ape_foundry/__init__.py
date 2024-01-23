@@ -15,6 +15,8 @@ from .provider import (
     FoundrySubprocessError,
 )
 
+from .accounts import FoundryAccount, AccountContainer
+
 
 @plugins.register(plugins.Config)
 def config_class():
@@ -51,6 +53,10 @@ def providers():
     yield "polygon", LOCAL_NETWORK_NAME, FoundryProvider
     yield "polygon", "mainnet-fork", FoundryForkProvider
     yield "polygon", "mumbai-fork", FoundryForkProvider
+
+@plugins.register(plugins.AccountPlugin)
+def account_types():
+    return AccountContainer, FoundryAccount
 
 
 __all__ = [

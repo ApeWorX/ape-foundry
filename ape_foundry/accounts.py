@@ -42,7 +42,7 @@ class FoundryAccount(KeyfileAccount):
         #        it again, potentially requiring a password if the account
         #        is re-locked
         if self.locked:
-            return self._address # cached value or None
+            return self._address or "*address encrypted*" # cached value or placeholder
         if self._address is None:
             key = self._KeyfileAccount__key
             account = EthAccount.from_key(key)

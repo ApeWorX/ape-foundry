@@ -36,7 +36,7 @@ class FoundryAccount(KeyfileAccount):
         # NOTE: Foundry uses standard Ethereum keystores which do not have an
         #      address field. We need to compute the address from the private
         #      key. Because this requires unlocking, we do two things:
-        #      - return cached value (or None) if locked, to allow easy iteration
+        #      - return cached value (or placeholder) if locked, to allow easy iteration
         #        over accounts without prompting for a password each time
         #      - cache the address once computed, so we don't have to compute
         #        it again, potentially requiring a password if the account

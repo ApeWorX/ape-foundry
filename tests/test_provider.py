@@ -457,20 +457,15 @@ def test_extract_custom_error_transaction_given(
 
 
 @pytest.mark.parametrize("tx_hash", ("0x0123", HexBytes("0x0123")))
-def test_extract_custom_error_transaction_given_trace_with_memory_fails(mocker, tx_hash):
-    """
-    Replicated a condition where using enableMemory=true fails when obtaining
-    a trace, but enableMemory=false doesn't.
-    """
+def test_extract_custom_error_transaction_given_trace_fails(mocker, tx_hash):
     provider = mocker.MagicMock()
     tx = mocker.MagicMock()
     tx.txn_hash = tx_hash
     tracker = []
 
-    def trace(txn_hash: str, steps_tracing: bool = True, enable_memory: bool = True):
-        tracker.append((txn_hash, enable_memory))
-        if enable_memory:
-            raise ValueError("Connection failed.")
+    def trace(txn_hash: str, *args, **kwargs):
+        tracker.append(txn_hash)
+        raise ValueError("Connection failed.")
 
     provider._get_transaction_trace.side_effect = trace
 
@@ -478,4 +473,4 @@ def test_extract_custom_error_transaction_given_trace_with_memory_fails(mocker, 
     assert actual == ""
 
     # Show failure was tracked
-    assert tracker[0] == (HexBytes(tx.txn_hash).hex(), True)
+    assert tracker[0] == HexBytes(tx.txn_hash).hex()

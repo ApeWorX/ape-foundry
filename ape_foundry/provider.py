@@ -992,8 +992,6 @@ def _extract_custom_error(provider: FoundryProvider, **kwargs) -> str:
         txn = kwargs["txn"]
         txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else txn.txn_hash.hex()
         try:
-            # NOTE: Disable memory because large input data fails
-            #    And all we need is the revert message.
             trace = list(provider._get_transaction_trace(txn_hash))[-1]
         except Exception:
             return ""

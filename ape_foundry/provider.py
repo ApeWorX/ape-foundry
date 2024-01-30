@@ -731,7 +731,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         elif message.lower() == "execution reverted":
             err = ContractLogicError(TransactionError.DEFAULT_MESSAGE, base_err=exception, **kwargs)
-
+            breakpoint()
             if isinstance(exception, Web3ContractLogicError):
                 # Check for custom error.
                 data = {}
@@ -741,7 +741,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
                 elif "txn" in kwargs:
                     try:
-                        txn_hash = kwargs["txn"].txn_hash.hex()
+                        txn_hash = kwargs["txn"].txn_hash
+                        if isinstance(txn_hash, bytes):
+                            txn_hash = txn_hash.hex()
                         data = list(self.get_transaction_trace(txn_hash))[-1].raw
                     except Exception:
                         pass

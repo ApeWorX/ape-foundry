@@ -687,9 +687,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         for trace in self._get_transaction_trace(txn_hash):
             yield self._create_trace_frame(trace)
 
-    def _get_transaction_trace(self, txn_hash: str) -> Iterator[EvmTraceFrame]:
+    def _get_transaction_trace(
+        self, txn_hash: str, steps_tracing: bool = True, enable_memory: bool = True
+    ) -> Iterator[EvmTraceFrame]:
         result = self._make_request(
-            "debug_traceTransaction", [txn_hash, {"stepsTracing": True, "enableMemory": True}]
+            "debug_traceTransaction",
+            [txn_hash, {"stepsTracing": steps_tracing, "enableMemory": enable_memory}],
         )
         frames = result.get("structLogs", [])
         for frame in frames:
@@ -731,25 +734,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         elif message.lower() == "execution reverted":
             err = ContractLogicError(TransactionError.DEFAULT_MESSAGE, base_err=exception, **kwargs)
-
-            if isinstance(exception, Web3ContractLogicError):
-                # Check for custom error.
-                data = {}
-                if "trace" in kwargs:
-                    kwargs["trace"], new_trace = tee(kwargs["trace"])
-                    data = list(new_trace)[-1].raw
-
-                elif "txn" in kwargs:
-                    try:
-                        txn_hash = kwargs["txn"].txn_hash.hex()
-                        data = list(self.get_transaction_trace(txn_hash))[-1].raw
-                    except Exception:
-                        pass
-
-                if data.get("op") == "REVERT":
-                    custom_err = "".join([x[2:] for x in data["memory"][4:]])
-                    if custom_err:
-                        err.message = f"0x{custom_err}"
+            if isinstance(exception, Web3ContractLogicError) and (
+                msg := _extract_custom_error(self, **kwargs)
+            ):
+                err.message = msg
 
             err.message = (
                 TransactionError.DEFAULT_MESSAGE if err.message in ("", "0x", None) else err.message
@@ -991,3 +979,29 @@ class FoundryForkProvider(FoundryProvider):
         # # Rest the fork
         result = self._make_request("anvil_reset", [{"forking": forking_params}])
         return result
+
+
+# Abstracted for easier testing conditions.
+def _extract_custom_error(provider: FoundryProvider, **kwargs) -> str:
+    data = {}
+    if "trace" in kwargs:
+        kwargs["trace"], new_trace = tee(kwargs["trace"])
+        data = list(new_trace)[-1].raw
+
+    elif "txn" in kwargs:
+        txn = kwargs["txn"]
+        txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else txn.txn_hash.hex()
+        try:
+            trace = list(provider._get_transaction_trace(txn_hash))[-1]
+        except Exception:
+            return ""
+
+        data = trace.model_dump(by_alias=True, mode="json") if trace else {}
+
+    if data and data.get("op") == "REVERT":
+        memory = data.get("memory", [])
+        custom_err = "".join([x[2:] for x in memory[4:]])
+        if custom_err:
+            return f"0x{custom_err}"
+
+    return ""

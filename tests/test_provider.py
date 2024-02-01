@@ -9,12 +9,12 @@ from ape.exceptions import ContractLogicError, TransactionError
 from ape.types import CallTreeNode, TraceFrame
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HashBytes32
-from eth_utils import to_int
+from eth_utils import encode_hex, to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID
+from ape_foundry.provider import FOUNDRY_CHAIN_ID, _extract_custom_error
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -435,3 +435,42 @@ def test_disable_block_gas_limit(temp_config, disconnected_provider):
     with temp_config(data):
         cmd = disconnected_provider.build_command()
         assert "--disable-block-gas-limit" in cmd
+
+
+def test_extract_custom_error_trace_given(mocker):
+    provider = mocker.MagicMock()
+    trace = mocker.MagicMock()
+    trace.raw = {"op": "REVERT", "memory": [None, None, None, None, encode_hex("CustomError")]}
+    trace = iter([trace])
+    actual = _extract_custom_error(provider, trace=trace)
+    assert actual.startswith("0x")
+
+
+def test_extract_custom_error_transaction_given(
+    connected_provider, vyper_contract_instance, not_owner
+):
+    with pytest.raises(ContractLogicError) as err:
+        vyper_contract_instance.setNumber(546, sender=not_owner, allow_fail=True)
+
+    actual = _extract_custom_error(connected_provider, txn=err.value.txn)
+    assert actual == ""
+
+
+@pytest.mark.parametrize("tx_hash", ("0x0123", HexBytes("0x0123")))
+def test_extract_custom_error_transaction_given_trace_fails(mocker, tx_hash):
+    provider = mocker.MagicMock()
+    tx = mocker.MagicMock()
+    tx.txn_hash = tx_hash
+    tracker = []
+
+    def trace(txn_hash: str, *args, **kwargs):
+        tracker.append(txn_hash)
+        raise ValueError("Connection failed.")
+
+    provider._get_transaction_trace.side_effect = trace
+
+    actual = _extract_custom_error(provider, txn=tx)
+    assert actual == ""
+
+    # Show failure was tracked
+    assert tracker[0] == HexBytes(tx.txn_hash).hex()

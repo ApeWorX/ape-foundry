@@ -30,6 +30,8 @@ def providers():
 
     yield "arbitrum", LOCAL_NETWORK_NAME, FoundryProvider
     yield "arbitrum", "mainnet-fork", FoundryForkProvider
+    yield "arbitrum", "sepolia-fork", FoundryForkProvider
+    # TODO: Remove when goerli is sunset
     yield "arbitrum", "goerli-fork", FoundryForkProvider
 
     yield "avalanche", LOCAL_NETWORK_NAME, FoundryProvider
@@ -46,6 +48,8 @@ def providers():
 
     yield "optimism", LOCAL_NETWORK_NAME, FoundryProvider
     yield "optimism", "mainnet-fork", FoundryForkProvider
+    yield "optimism", "sepolia-fork", FoundryForkProvider
+    # TODO: Remove when goerli is sunset
     yield "optimism", "goerli-fork", FoundryForkProvider
 
     yield "polygon", LOCAL_NETWORK_NAME, FoundryProvider

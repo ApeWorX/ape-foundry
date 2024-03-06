@@ -718,6 +718,26 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not message:
             return VirtualMachineError(base_err=exception, **kwargs)
 
+        def _handle_execution_reverted(
+            exception: Exception, revert_message: Optional[str] = None, **kwargs
+        ):
+            if revert_message in ("", "0x", None):
+                revert_message = TransactionError.DEFAULT_MESSAGE
+
+            enriched = self.compiler_manager.enrich_error(
+                ContractLogicError(base_err=exception, revert_message=message, **kwargs)
+            )
+
+            # Show call trace if availble
+            if enriched.txn:
+                # Apparently this is not always a receipt on a failed tx
+                if isinstance(enriched.txn, TransactionAPI) and enriched.txn.receipt:
+                    enriched.txn.receipt.show_trace()
+                elif isinstance(enriched.txn, ReceiptAPI):
+                    enriched.txn.show_trace()
+
+            return enriched
+
         # Handle `ContactLogicError` similarly to other providers in `ape`.
         # by stripping off the unnecessary prefix that foundry has on reverts.
         foundry_prefix = (
@@ -725,24 +745,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            err = ContractLogicError(base_err=exception, revert_message=message, **kwargs)
-            return self.compiler_manager.enrich_error(err)
+            return _handle_execution_reverted(exception, message, **kwargs)
 
         elif "Transaction reverted without a reason string" in message:
-            err = ContractLogicError(base_err=exception, **kwargs)
-            return self.compiler_manager.enrich_error(err)
+            return _handle_execution_reverted(exception, **kwargs)
 
         elif message.lower() == "execution reverted":
-            err = ContractLogicError(TransactionError.DEFAULT_MESSAGE, base_err=exception, **kwargs)
+            message = TransactionError.DEFAULT_MESSAGE
             if isinstance(exception, Web3ContractLogicError) and (
                 msg := _extract_custom_error(self, **kwargs)
             ):
-                err.message = msg
-
-            err.message = (
-                TransactionError.DEFAULT_MESSAGE if err.message in ("", "0x", None) else err.message
-            )
-            return self.compiler_manager.enrich_error(err)
+                if msg not in ("", "0x", None):
+                    message = msg
+            return _handle_execution_reverted(exception, revert_message=message, **kwargs)
 
         elif message == "Transaction ran out of gas" or "OutOfGas" in message:
             return OutOfGasError(base_err=exception, **kwargs)
@@ -752,14 +767,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 message.replace("execution reverted: ", "").strip()
                 or TransactionError.DEFAULT_MESSAGE
             )
-            err = ContractLogicError(message, base_err=exception, **kwargs)
-            return self.compiler_manager.enrich_error(err)
+            return _handle_execution_reverted(exception, revert_message=message, **kwargs)
 
         elif isinstance(exception, ContractCustomError):
             # Is raw hex (custom exception)
             message = TransactionError.DEFAULT_MESSAGE if message in ("", None, "0x") else message
-            err = ContractLogicError(message, base_err=exception, **kwargs)
-            return self.compiler_manager.enrich_error(err)
+            return _handle_execution_reverted(exception, revert_message=message, **kwargs)
 
         return VirtualMachineError(message, **kwargs)
 

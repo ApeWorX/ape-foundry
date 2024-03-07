@@ -730,7 +730,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
             # Show call trace if availble
             if enriched.txn:
-                # Apparently this is not always a receipt on a failed tx
+                # Unlikely scenario where a transaction is on the error even though a receipt
+                # exists.
                 if isinstance(enriched.txn, TransactionAPI) and enriched.txn.receipt:
                     enriched.txn.receipt.show_trace()
                 elif isinstance(enriched.txn, ReceiptAPI):

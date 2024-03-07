@@ -289,16 +289,25 @@ def test_base_fee(connected_provider, temp_config, networks, accounts):
     data = {"foundry": {"base_fee": new_base_fee, "host": "http://127.0.0.1:8555"}}
     with temp_config(data):
         with networks.ethereum.local.use_provider("foundry") as provider:
+            # Verify the block has the right base fee
+            block_one = provider.get_block("latest")
+            assert block_one.base_fee == new_base_fee
+
+            # Make sure the command has the right base fee
             cmd = provider.build_command()
             idx = -1
             for i, part in enumerate(cmd):
                 if part == "--block-base-fee-per-gas":
                     idx = i + 1
-            assert idx > -1
-            assert cmd[idx] == str(new_base_fee)
+            assert idx > -1  # option was found
+            assert cmd[idx] == str(new_base_fee)  # option val is correct
 
             # Show can transact with this base_fee
             acct1.transfer(acct2, "1 eth")
+
+            # Verify the block still has the right base fee
+            block_two = provider.get_block("latest")
+            assert block_two.base_fee == new_base_fee
 
 
 def test_auto_mine(connected_provider):

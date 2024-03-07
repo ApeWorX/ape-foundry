@@ -289,7 +289,13 @@ def test_base_fee(connected_provider, temp_config, networks, accounts):
     data = {"foundry": {"base_fee": new_base_fee, "host": "http://127.0.0.1:8555"}}
     with temp_config(data):
         with networks.ethereum.local.use_provider("foundry") as provider:
-            assert provider.base_fee == new_base_fee
+            cmd = provider.build_command()
+            idx = -1
+            for i, part in enumerate(cmd):
+                if part == "--block-base-fee-per-gas":
+                    idx = i + 1
+            assert idx > -1
+            assert cmd[idx] == str(new_base_fee)
 
             # Show can transact with this base_fee
             acct1.transfer(acct2, "1 eth")

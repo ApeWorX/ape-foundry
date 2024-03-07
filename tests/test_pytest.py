@@ -87,8 +87,8 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
 
 
 @pytest.mark.fork
-def test_gas_flag_in_tests(ape_pytester):
-    result = ape_pytester.runpytest("--gas")
+def test_gas_flag_in_tests(ape_pytester, sender):
+    result = ape_pytester.runpytest("--gas", "--network", "ethereum:local:foundry")
     run_gas_test(result)
 
     # Verify can happen more than once.
@@ -101,7 +101,13 @@ def test_gas_flag_exclude_method_using_cli_option(ape_pytester):
     expected = filter_expected_methods("fooAndBar", "myNumber")
     # Also ensure can filter out whole class
     expected = expected.replace(TOKEN_B_GAS_REPORT, "")
-    result = ape_pytester.runpytest("--gas", "--gas-exclude", "*:fooAndBar,*:myNumber,tokenB:*")
+    result = ape_pytester.runpytest(
+        "--gas",
+        "--gas-exclude",
+        "*:fooAndBar,*:myNumber,tokenB:*",
+        "--network",
+        "ethereum:local:foundry",
+    )
     run_gas_test(result, expected_report=expected)
 
 
@@ -112,7 +118,7 @@ def test_coverage(ape_pytester):
     verifying Foundry in coverage.
     TODO: Write + Run tests in an env with both vyper and foundry.
     """
-    result = ape_pytester.runpytest("--coverage")
+    result = ape_pytester.runpytest("--coverage", "--network", "ethereum:local:foundry")
     result.assert_outcomes(passed=NUM_TESTS)
     assert any("Coverage Profile" in ln for ln in result.outlines)
     assert any("WARNING: No coverage data found." in ln for ln in result.outlines)

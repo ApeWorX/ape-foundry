@@ -52,6 +52,15 @@ def providers():
     yield "polygon", "mainnet-fork", FoundryForkProvider
     yield "polygon", "mumbai-fork", FoundryForkProvider
 
+    yield "base", LOCAL_NETWORK_NAME, FoundryProvider
+    yield "base", "mainnet-fork", FoundryForkProvider
+    yield "base", "goerli-fork", FoundryForkProvider
+    yield "base", "sepolia-fork", FoundryForkProvider
+
+    yield "blast", LOCAL_NETWORK_NAME, FoundryProvider
+    yield "blast", "mainnet-fork", FoundryForkProvider
+    yield "blast", "sepolia-fork", FoundryForkProvider
+
 
 __all__ = [
     "FoundryNetworkConfig",

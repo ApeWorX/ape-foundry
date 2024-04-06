@@ -25,9 +25,6 @@ foundry:
       mainnet:
         upstream_provider: alchemy
         block_number: 15776634
-      goerli:
-        upstream_provider: alchemy
-        block_number: 7849922
       sepolia:
         upstream_provider: alchemy
         block_number: 3091950

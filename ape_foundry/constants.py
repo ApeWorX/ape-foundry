@@ -13,11 +13,8 @@ EVM_VERSION_BY_NETWORK = {
             12244000: "berlin",
             12965000: "london",
         },
-        "goerli": {
-            0: "petersburg",
-            1561651: "istanbul",
-            4460644: "berlin",
-            5062605: "london",
+        "sepolia": {
+            0: "london",
         },
     },
     "polygon": {

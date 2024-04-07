@@ -9,7 +9,7 @@ ethereum:
 polygon:
   local:
     default_provider: foundry
-  mumbai:
+  amoy:
     default_provider: alchemy
   mainnet:
     default_provider: alchemy

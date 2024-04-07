@@ -24,11 +24,9 @@ EVM_VERSION_BY_NETWORK = {
             14750000: "berlin",
             23850000: "london",
         },
-        "mumbai": {
-            0: "petersburg",
-            2722000: "muirglacier",
-            13996000: "berlin",
-            22640000: "london",
+        "amoy": {
+            0: "berlin",
+            73100: "london",
         },
     },
 }

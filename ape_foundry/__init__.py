@@ -50,7 +50,7 @@ def providers():
 
     yield "polygon", LOCAL_NETWORK_NAME, FoundryProvider
     yield "polygon", "mainnet-fork", FoundryForkProvider
-    yield "polygon", "mumbai-fork", FoundryForkProvider
+    yield "polygon", "amoy-fork", FoundryForkProvider
 
     yield "base", LOCAL_NETWORK_NAME, FoundryProvider
     yield "base", "mainnet-fork", FoundryForkProvider

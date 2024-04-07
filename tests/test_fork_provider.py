@@ -173,13 +173,13 @@ def test_connect_to_polygon(networks, owner, contract_container):
     """
     Ensures we don't get PoA middleware issue.
     """
-    with networks.polygon.mumbai_fork.use_provider("foundry"):
+    with networks.polygon.amoy_fork.use_provider("foundry"):
         contract = owner.deploy(contract_container)
         assert isinstance(contract, ContractInstance)  # Didn't fail
 
 
 @pytest.mark.fork
-@pytest.mark.parametrize("network,port", [("mumbai", 9878), ("mainnet", 9879)])
+@pytest.mark.parametrize("network,port", [("amoy", 9878), ("mainnet", 9879)])
 def test_provider_settings(networks, network, port):
     expected_block_number = 1234
     settings = {

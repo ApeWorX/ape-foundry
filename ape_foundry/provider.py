@@ -725,10 +725,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 revert_message = TransactionError.DEFAULT_MESSAGE
 
             enriched = self.compiler_manager.enrich_error(
-                ContractLogicError(base_err=exception, revert_message=message, **kwargs)
+                ContractLogicError(base_err=exception, revert_message=revert_message, **kwargs)
             )
 
-            # Show call trace if availble
+            # Show call trace if available
             if enriched.txn:
                 # Unlikely scenario where a transaction is on the error even though a receipt
                 # exists.

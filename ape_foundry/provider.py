@@ -724,9 +724,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             if revert_message in ("", "0x", None):
                 revert_message = TransactionError.DEFAULT_MESSAGE
 
-            enriched = self.compiler_manager.enrich_error(
-                ContractLogicError(base_err=exception, revert_message=revert_message, **kwargs)
+            sub_err = ContractLogicError(
+                base_err=exception, revert_message=revert_message, **kwargs
             )
+            enriched = self.compiler_manager.enrich_error(sub_err)
 
             # Show call trace if available
             if enriched.txn:

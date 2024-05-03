@@ -5,7 +5,7 @@ repos:
     -   id: check-yaml
 
 -   repo: https://github.com/PyCQA/isort
-    rev: v5.13.2
+    rev: 5.13.2
     hooks:
       - id: isort
 

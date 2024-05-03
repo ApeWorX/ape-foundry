@@ -159,8 +159,9 @@ def test_request_timeout(connected_provider, config):
     assert actual == expected
 
     # Test default behavior
+    # TODO: Use `ape.utils.use_tempdir()` (once released)
     with tempfile.TemporaryDirectory() as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
+        temp_dir = Path(temp_dir_str).resolve()
         with config.using_project(temp_dir):
             assert connected_provider.timeout == 30
 

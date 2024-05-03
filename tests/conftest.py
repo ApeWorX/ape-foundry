@@ -246,8 +246,9 @@ def sepolia_fork_provider(name, ethereum, sepolia_fork_port):
 def temp_config(config):
     @contextmanager
     def func(data: Dict, package_json: Optional[Dict] = None):
+        # TODO: Use `ape.utils.use_tempdir()` (once released)
         with tempfile.TemporaryDirectory() as temp_dir_str:
-            temp_dir = Path(temp_dir_str)
+            temp_dir = Path(temp_dir_str).resolve()
 
             config._cached_configs = {}
             config_file = temp_dir / CONFIG_FILE_NAME

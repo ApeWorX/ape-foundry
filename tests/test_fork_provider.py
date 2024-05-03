@@ -48,7 +48,8 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
 
 
-@pytest.mark.parametrize("network", [k for k in NETWORKS.keys()])
+# TODO: Remove `in` check once goerli removed from core.
+@pytest.mark.parametrize("network", [k for k in NETWORKS.keys() if k not in ("goerli",)])
 def test_fork_config(name, config, network):
     plugin_config = config.get_config(name)
     network_config = plugin_config["fork"].get("ethereum", {}).get(network, {})
@@ -60,6 +61,7 @@ def test_fork_config(name, config, network):
 def test_sepolia_impersonate(accounts, sepolia_fork_provider):
     impersonated_account = accounts[TEST_ADDRESS]
     other_account = accounts[0]
+    impersonated_account.balance += 1_000_000_000_000_000_000
     receipt = impersonated_account.transfer(other_account, "1 wei")
     assert receipt.receiver == other_account
     assert receipt.sender == impersonated_account
@@ -69,6 +71,7 @@ def test_sepolia_impersonate(accounts, sepolia_fork_provider):
 def test_mainnet_impersonate(accounts, mainnet_fork_provider):
     impersonated_account = accounts[TEST_ADDRESS]
     other_account = accounts[0]
+    impersonated_account.balance += 1_000_000_000_000_000_000
     receipt = impersonated_account.transfer(other_account, "1 wei")
     assert receipt.receiver == other_account
     assert receipt.sender == impersonated_account
@@ -81,8 +84,9 @@ def test_request_timeout(networks, config, mainnet_fork_provider):
     assert actual == expected
 
     # Test default behavior
+    # TODO: Use `ape.utils.use_tempdir()` (once released)
     with tempfile.TemporaryDirectory() as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
+        temp_dir = Path(temp_dir_str).resolve()
         with config.using_project(temp_dir):
             assert networks.active_provider.timeout == 300
 

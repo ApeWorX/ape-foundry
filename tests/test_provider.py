@@ -14,7 +14,7 @@ from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID, _extract_custom_error
+from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryNetworkConfig, _extract_custom_error
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -489,3 +489,8 @@ def test_extract_custom_error_transaction_given_trace_fails(mocker, tx_hash):
 
     # Show failure was tracked
     assert tracker[0] == HexBytes(tx.txn_hash).hex()
+
+
+def test_fork_config_none():
+    cfg = FoundryNetworkConfig.model_validate({"fork": None})
+    assert isinstance(cfg["fork"], dict)

@@ -27,7 +27,7 @@ NAME = "foundry"
 # Needed to test tracing support in core `ape test` command.
 pytest_plugins = ["pytester"]
 MAINNET_FORK_PORT = 9001
-GOERLI_FORK_PORT = 9002
+SEPOLIA_FORK_PORT = 9002
 
 
 def pytest_runtest_makereport(item, call):
@@ -230,14 +230,14 @@ def mainnet_fork_provider(name, mainnet_fork, mainnet_fork_port):
 
 
 @pytest.fixture
-def goerli_fork_port():
-    return GOERLI_FORK_PORT
+def sepolia_fork_port():
+    return SEPOLIA_FORK_PORT
 
 
 @pytest.fixture
-def goerli_fork_provider(name, ethereum, goerli_fork_port):
-    with ethereum.goerli_fork.use_provider(
-        name, provider_settings={"host": f"http://127.0.0.1:{goerli_fork_port}"}
+def sepolia_fork_provider(name, ethereum, sepolia_fork_port):
+    with ethereum.sepolia_fork.use_provider(
+        name, provider_settings={"host": f"http://127.0.0.1:{sepolia_fork_port}"}
     ) as provider:
         yield provider
 
@@ -246,8 +246,9 @@ def goerli_fork_provider(name, ethereum, goerli_fork_port):
 def temp_config(config):
     @contextmanager
     def func(data: Dict, package_json: Optional[Dict] = None):
+        # TODO: Use `ape.utils.use_tempdir()` (once released)
         with tempfile.TemporaryDirectory() as temp_dir_str:
-            temp_dir = Path(temp_dir_str)
+            temp_dir = Path(temp_dir_str).resolve()
 
             config._cached_configs = {}
             config_file = temp_dir / CONFIG_FILE_NAME

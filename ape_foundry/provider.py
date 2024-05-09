@@ -578,7 +578,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             # a VM error.
             receipt.raise_for_status()
 
-        logger.info(f"Confirmed {receipt.txn_hash} (total fees paid = {receipt.total_fees_paid})")
         self.chain_manager.history.append(receipt)
         return receipt
 

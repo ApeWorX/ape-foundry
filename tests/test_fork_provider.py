@@ -18,7 +18,7 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
 
 @pytest.mark.fork
 def test_multiple_providers(
-    name, networks, ethereum, connected_provider, mainnet_fork_port, goerli_fork_port
+    name, networks, ethereum, connected_provider, mainnet_fork_port, sepolia_fork_port
 ):
     default_host = "http://127.0.0.1:8545"
     assert networks.active_provider.name == name
@@ -30,12 +30,14 @@ def test_multiple_providers(
         assert networks.active_provider.name == name
         assert networks.active_provider.network.name == "mainnet-fork"
         assert networks.active_provider.uri == mainnet_fork_host
-        goerli_fork_host = f"http://127.0.0.1:{goerli_fork_port}"
+        sepolia_fork_host = f"http://127.0.0.1:{sepolia_fork_port}"
 
-        with ethereum.goerli_fork.use_provider(name, provider_settings={"host": goerli_fork_host}):
+        with ethereum.sepolia_fork.use_provider(
+            name, provider_settings={"host": sepolia_fork_host}
+        ):
             assert networks.active_provider.name == name
-            assert networks.active_provider.network.name == "goerli-fork"
-            assert networks.active_provider.uri == goerli_fork_host
+            assert networks.active_provider.network.name == "sepolia-fork"
+            assert networks.active_provider.uri == sepolia_fork_host
 
         assert networks.active_provider.name == name
         assert networks.active_provider.network.name == "mainnet-fork"
@@ -46,7 +48,8 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
 
 
-@pytest.mark.parametrize("network", [k for k in NETWORKS.keys()])
+# TODO: Remove `in` check once goerli removed from core.
+@pytest.mark.parametrize("network", [k for k in NETWORKS.keys() if k not in ("goerli",)])
 def test_fork_config(name, config, network):
     plugin_config = config.get_config(name)
     network_config = plugin_config["fork"].get("ethereum", {}).get(network, {})
@@ -55,9 +58,10 @@ def test_fork_config(name, config, network):
 
 
 @pytest.mark.fork
-def test_goerli_impersonate(accounts, goerli_fork_provider):
+def test_sepolia_impersonate(accounts, sepolia_fork_provider):
     impersonated_account = accounts[TEST_ADDRESS]
     other_account = accounts[0]
+    impersonated_account.balance += 1_000_000_000_000_000_000
     receipt = impersonated_account.transfer(other_account, "1 wei")
     assert receipt.receiver == other_account
     assert receipt.sender == impersonated_account
@@ -67,6 +71,7 @@ def test_goerli_impersonate(accounts, goerli_fork_provider):
 def test_mainnet_impersonate(accounts, mainnet_fork_provider):
     impersonated_account = accounts[TEST_ADDRESS]
     other_account = accounts[0]
+    impersonated_account.balance += 1_000_000_000_000_000_000
     receipt = impersonated_account.transfer(other_account, "1 wei")
     assert receipt.receiver == other_account
     assert receipt.sender == impersonated_account
@@ -79,28 +84,29 @@ def test_request_timeout(networks, config, mainnet_fork_provider):
     assert actual == expected
 
     # Test default behavior
+    # TODO: Use `ape.utils.use_tempdir()` (once released)
     with tempfile.TemporaryDirectory() as temp_dir_str:
-        temp_dir = Path(temp_dir_str)
+        temp_dir = Path(temp_dir_str).resolve()
         with config.using_project(temp_dir):
             assert networks.active_provider.timeout == 300
 
 
 @pytest.mark.fork
-def test_reset_fork_no_fork_block_number(goerli_fork_provider):
-    goerli_fork_provider.mine(5)
-    prev_block_num = goerli_fork_provider.get_block("latest").number
-    goerli_fork_provider.reset_fork()
-    block_num_after_reset = goerli_fork_provider.get_block("latest").number
+def test_reset_fork_no_fork_block_number(sepolia_fork_provider):
+    sepolia_fork_provider.mine(5)
+    prev_block_num = sepolia_fork_provider.get_block("latest").number
+    sepolia_fork_provider.reset_fork()
+    block_num_after_reset = sepolia_fork_provider.get_block("latest").number
     assert block_num_after_reset < prev_block_num
 
 
 @pytest.mark.fork
-def test_reset_fork_specify_block_number_via_argument(goerli_fork_provider):
-    goerli_fork_provider.mine(5)
-    prev_block_num = goerli_fork_provider.get_block("latest").number
+def test_reset_fork_specify_block_number_via_argument(sepolia_fork_provider):
+    sepolia_fork_provider.mine(5)
+    prev_block_num = sepolia_fork_provider.get_block("latest").number
     new_block_number = prev_block_num - 1
-    goerli_fork_provider.reset_fork(block_number=new_block_number)
-    block_num_after_reset = goerli_fork_provider.get_block("latest").number
+    sepolia_fork_provider.reset_fork(block_number=new_block_number)
+    block_num_after_reset = sepolia_fork_provider.get_block("latest").number
     assert block_num_after_reset == new_block_number
 
 
@@ -171,13 +177,13 @@ def test_connect_to_polygon(networks, owner, contract_container):
     """
     Ensures we don't get PoA middleware issue.
     """
-    with networks.polygon.mumbai_fork.use_provider("foundry"):
+    with networks.polygon.amoy_fork.use_provider("foundry"):
         contract = owner.deploy(contract_container)
         assert isinstance(contract, ContractInstance)  # Didn't fail
 
 
 @pytest.mark.fork
-@pytest.mark.parametrize("network,port", [("mumbai", 9878), ("mainnet", 9879)])
+@pytest.mark.parametrize("network,port", [("amoy", 9878), ("mainnet", 9879)])
 def test_provider_settings(networks, network, port):
     expected_block_number = 1234
     settings = {

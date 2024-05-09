@@ -43,7 +43,7 @@ from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from evm_trace import CallType, ParityTraceList
 from evm_trace import TraceFrame as EvmTraceFrame
 from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import SettingsConfigDict
 from web3 import HTTPProvider, Web3
 from web3.exceptions import ContractCustomError
@@ -96,10 +96,10 @@ class FoundryNetworkConfig(PluginConfig):
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
     fork: Dict[str, Dict[str, FoundryForkConfig]] = {}
 
+    disable_block_gas_limit: bool = False
     """
     Disable the ``call.gas_limit <= block.gas_limit`` constraint.
     """
-    disable_block_gas_limit: bool = False
 
     auto_mine: bool = True
     """
@@ -111,7 +111,13 @@ class FoundryNetworkConfig(PluginConfig):
     Set a block time to allow mining to happen on an interval
     rather than only when a new transaction is submitted.
     """
+
     model_config = SettingsConfigDict(extra="allow")
+
+    @field_validator("fork", mode="before")
+    @classmethod
+    def _validate_fork(cls, value):
+        return value or {}
 
 
 def _call(*args):

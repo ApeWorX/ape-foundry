@@ -4,11 +4,9 @@ from pathlib import Path
 from typing import List
 
 import pytest
-from eth_utils import encode_hex
-from hexbytes import HexBytes
-
 from ape.exceptions import ContractLogicError
 from ape.utils import create_tempdir
+from hexbytes import HexBytes
 
 from .expected_traces import (
     LOCAL_GAS_REPORT,
@@ -173,8 +171,8 @@ def test_extract_custom_error_transaction_given_trace_fails(connected_provider, 
         tracker.append(txn_hash)
         raise ValueError("Connection failed.")
 
-    connected_provider._get_transaction_trace = mocker.MagicMock()
-    connected_provider._get_transaction_trace.side_effect = trace
+    patch = mocker.patch("ape_foundry.provider._get_transaction_trace")
+    patch.side_effect = trace
 
     actual = connected_provider._extract_custom_error(txn=tx)
     assert actual == ""

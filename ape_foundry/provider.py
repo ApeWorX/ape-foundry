@@ -28,7 +28,7 @@ from ape.logging import logger
 from ape.types import AddressType, BlockID, ContractCode, SnapshotID
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
-from ape_ethereum.trace import TraceApproach
+from ape_ethereum.trace import TraceApproach, TransactionTrace
 from ape_test import ApeTestConfig
 from eth_pydantic_types import HashBytes32, HexBytes
 from eth_typing import HexStr
@@ -586,7 +586,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if "call_trace_approach" not in kwargs:
             kwargs["call_trace_approach"] = TraceApproach.PARITY
 
-        return self._get_transaction_trace(transaction_hash, **kwargs)
+        return _get_transaction_trace(transaction_hash, **kwargs)
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
         if not len(exception.args):
@@ -864,3 +864,8 @@ class FoundryForkProvider(FoundryProvider):
         # # Rest the fork
         result = self.make_request("anvil_reset", [{"forking": forking_params}])
         return result
+
+
+def _get_transaction_trace(transaction_hash: str, **kwargs) -> TraceAPI:
+    # Abstracted for testing purposes.
+    return TransactionTrace(transaction_hash=transaction_hash, **kwargs)

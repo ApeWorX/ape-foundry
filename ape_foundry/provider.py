@@ -634,21 +634,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         elif message.lower() == "execution reverted":
             message = TransactionError.DEFAULT_MESSAGE
-            if isinstance(exception, Web3ContractLogicError):
-                # Check for custom error.
-                trace = None
-                if "trace" in kwargs:
-                    trace = kwargs["trace"]
-
-                elif "txn" in kwargs:
-                    try:
-                        txn_hash = kwargs["txn"].txn_hash.hex()
-                        trace = self.get_transaction_trace(txn_hash)
-                    except Exception:
-                        pass
-
-                if trace is not None and (ret_value := trace.return_value):
-                    exception.message = ret_value
+            if isinstance(exception, Web3ContractLogicError) and (
+                msg := self._extract_custom_error(**kwargs)
+            ):
+                exception.message = msg
 
             return _handle_execution_reverted(exception, revert_message=message, **kwargs)
 
@@ -668,6 +657,26 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return _handle_execution_reverted(exception, revert_message=message, **kwargs)
 
         return VirtualMachineError(message, **kwargs)
+
+    # Abstracted for easier testing conditions.
+    def _extract_custom_error(self, **kwargs) -> str:
+        # Check for custom error.
+        trace = None
+        if "trace" in kwargs:
+            trace = kwargs["trace"]
+
+        elif "txn" in kwargs:
+            txn = kwargs["txn"]
+            try:
+                txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else txn.txn_hash.hex()
+                trace = self.get_transaction_trace(txn_hash)
+            except Exception:
+                pass
+
+        if trace is not None and (revert_msg := trace.revert_message):
+            return revert_msg
+
+        return ""
 
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self.make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True

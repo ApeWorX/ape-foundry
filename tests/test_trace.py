@@ -4,6 +4,10 @@ from pathlib import Path
 from typing import List
 
 import pytest
+from eth_utils import encode_hex
+from hexbytes import HexBytes
+
+from ape.exceptions import ContractLogicError
 from ape.utils import create_tempdir
 
 from .expected_traces import (
@@ -140,3 +144,40 @@ def assert_rich_output(rich_capture: List[str], expected: str):
     if expected_len > actual_len:
         rest = "\n".join(expected_lines[actual_len:])
         pytest.fail(f"Missing expected lines: {rest}")
+
+
+def test_extract_custom_error_trace_given(mocker, connected_provider):
+    trace = mocker.MagicMock()
+    trace.revert_message = "Unauthorized"
+    actual = connected_provider._extract_custom_error(trace=trace)
+    assert "Unauthorized" in actual
+
+
+def test_extract_custom_error_transaction_given(
+    connected_provider, vyper_contract_instance, not_owner
+):
+    with pytest.raises(ContractLogicError) as err:
+        vyper_contract_instance.setNumber(546, sender=not_owner, allow_fail=True)
+
+    actual = connected_provider._extract_custom_error(txn=err.value.txn)
+    assert actual == "!authorized"
+
+
+@pytest.mark.parametrize("tx_hash", ("0x0123", HexBytes("0x0123")))
+def test_extract_custom_error_transaction_given_trace_fails(connected_provider, mocker, tx_hash):
+    tx = mocker.MagicMock()
+    tx.txn_hash = tx_hash
+    tracker = []
+
+    def trace(txn_hash: str, *args, **kwargs):
+        tracker.append(txn_hash)
+        raise ValueError("Connection failed.")
+
+    connected_provider._get_transaction_trace = mocker.MagicMock()
+    connected_provider._get_transaction_trace.side_effect = trace
+
+    actual = connected_provider._extract_custom_error(txn=tx)
+    assert actual == ""
+
+    # Show failure was tracked
+    assert tracker[0] == HexBytes(tx.txn_hash).hex()

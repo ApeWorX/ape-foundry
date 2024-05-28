@@ -1,6 +1,4 @@
 import os
-import tempfile
-from pathlib import Path
 
 import pytest
 from ape.api import TraceAPI
@@ -154,18 +152,15 @@ def test_get_transaction_trace_call_tree(connected_provider, sender, receiver):
     assert repr(trace) == "__ETH_transfer__.0x() 1"
 
 
-def test_request_timeout(connected_provider, config):
+def test_request_timeout(connected_provider, project):
     # Test value set in `ape-config.yaml`
     expected = 29
     actual = connected_provider.web3.provider._request_kwargs["timeout"]
     assert actual == expected
 
     # Test default behavior
-    # TODO: Use `ape.utils.use_tempdir()` (once released)
-    with tempfile.TemporaryDirectory() as temp_dir_str:
-        temp_dir = Path(temp_dir_str).resolve()
-        with config.using_project(temp_dir):
-            assert connected_provider.timeout == 30
+    with project.temp_config(foundry={"timeout": 30}):
+        assert connected_provider.timeout == 30
 
 
 def test_contract_interaction(connected_provider, owner, contract_instance, mocker):
@@ -274,14 +269,13 @@ def test_revert_error_using_impersonated_account(error_contract, accounts, conne
 
 
 @pytest.mark.parametrize("host", ("https://example.com", "example.com"))
-def test_host(temp_config, local_network, host):
-    data = {"foundry": {"host": host}}
-    with temp_config(data):
+def test_host(project, local_network, host):
+    with project.temp_config(foundry={"host": host}):
         provider = local_network.get_provider("foundry")
         assert provider.uri == "https://example.com"
 
 
-def test_base_fee(connected_provider, temp_config, networks, accounts):
+def test_base_fee(connected_provider, project, networks, accounts):
     assert connected_provider.base_fee == 0
 
     acct1 = accounts[-1]
@@ -289,8 +283,8 @@ def test_base_fee(connected_provider, temp_config, networks, accounts):
 
     # Show we can se the base-fee.
     new_base_fee = 1_000_000
-    data = {"foundry": {"base_fee": new_base_fee, "host": "http://127.0.0.1:8555"}}
-    with temp_config(data):
+    data = {"base_fee": new_base_fee, "host": "http://127.0.0.1:8555"}
+    with project.temp_config(foundry=data):
         with networks.ethereum.local.use_provider("foundry") as provider:
             # Verify the block has the right base fee
             block_one = provider.get_block("latest")
@@ -338,28 +332,25 @@ def test_get_virtual_machine_error_from_contract_logic_message_includes_base_err
     assert actual.base_err == exception
 
 
-def test_no_mining(temp_config, local_network, connected_provider):
+def test_no_mining(project, local_network, connected_provider):
     assert "--no-mining" not in connected_provider.build_command()
-    data = {"foundry": {"auto_mine": "false"}}
-    with temp_config(data):
+    with project.temp_config(foundry={"auto_mine": "false"}):
         provider = local_network.get_provider("foundry")
         cmd = provider.build_command()
         assert "--no-mining" in cmd
 
 
-def test_block_time(temp_config, local_network, connected_provider):
+def test_block_time(project, local_network, connected_provider):
     assert "--block-time" not in connected_provider.build_command()
-    data = {"foundry": {"block_time": 10}}
-    with temp_config(data):
+    with project.temp_config(foundry={"block_time": 10}):
         provider = local_network.get_provider("foundry")
         cmd = provider.build_command()
         assert "--block-time" in cmd
         assert "10" in cmd
 
 
-def test_remote_host(temp_config, local_network, no_anvil_bin):
-    data = {"foundry": {"host": "https://example.com"}}
-    with temp_config(data):
+def test_remote_host(project, local_network, no_anvil_bin):
+    with project.temp_config(foundry={"host": "https://example.com"}):
         with pytest.raises(
             FoundryProviderError,
             match=r"Failed to connect to remote Anvil node at 'https://example.com'\.",
@@ -368,7 +359,7 @@ def test_remote_host(temp_config, local_network, no_anvil_bin):
                 assert True
 
 
-def test_remote_host_using_env_var(temp_config, local_network, no_anvil_bin):
+def test_remote_host_using_env_var(local_network, no_anvil_bin):
     original = os.environ.get("APE_FOUNDRY_HOST")
     os.environ["APE_FOUNDRY_HOST"] = "https://example2.com"
 
@@ -443,14 +434,13 @@ def test_prepare_tx_with_max_gas(tx_type, connected_provider, ethereum, owner):
     assert actual.gas_limit == connected_provider.max_gas
 
 
-def test_disable_block_gas_limit(temp_config, disconnected_provider):
+def test_disable_block_gas_limit(project, disconnected_provider):
     # Ensure it is disabled by default.
     cmd = disconnected_provider.build_command()
     assert "--disable-block-gas-limit" not in cmd
 
     # Show we can enable it.
-    data = {"foundry": {"disable_block_gas_limit": True}}
-    with temp_config(data):
+    with project.temp_config(foundry={"disable_block_gas_limit": True}):
         cmd = disconnected_provider.build_command()
         assert "--disable-block-gas-limit" in cmd
 

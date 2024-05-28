@@ -3,7 +3,6 @@ import random
 import shutil
 from bisect import bisect_right
 from copy import copy
-from pathlib import Path
 from subprocess import PIPE, call
 from typing import Literal, Optional, Union, cast
 
@@ -180,10 +179,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             )
 
         return anvil
-
-    @property
-    def project_folder(self) -> Path:
-        return self.config_manager.PROJECT_FOLDER
 
     @property
     def uri(self) -> str:

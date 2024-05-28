@@ -1,4 +1,4 @@
-contracts_folder: data/contracts/ethereum/local
+contracts_folder: tests/data/contracts/ethereum/local
 
 ethereum:
   mainnet:

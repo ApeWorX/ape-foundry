@@ -72,7 +72,7 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.7.4,<0.8",
+        "eth-ape>=0.8.1,<0.9",
         "ethpm-types",  # Use same version as eth-ape
         "eth-pydantic-types",  # Use same version as eth-ape
         "evm-trace",  # Use same version as ape

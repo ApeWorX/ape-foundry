@@ -16,6 +16,9 @@ EVM_VERSION_BY_NETWORK = {
         "sepolia": {
             0: "london",
         },
+        "holesky": {
+            0: "london",
+        },
     },
     "polygon": {
         "mainnet": {

@@ -47,8 +47,7 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
 
 
-# TODO: Remove `in` check once goerli removed from core.
-@pytest.mark.parametrize("network", [k for k in NETWORKS.keys() if k not in ("goerli",)])
+@pytest.mark.parametrize("network", NETWORKS)
 def test_fork_config(name, config, network):
     plugin_config = config.get_config(name)
     network_config = plugin_config["fork"].get("ethereum", {}).get(network, {})

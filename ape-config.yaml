@@ -28,6 +28,9 @@ foundry:
       sepolia:
         upstream_provider: alchemy
         block_number: 3091950
+      holesky:
+        upstream_provider: alchemy
+        block_number: 100
 
 test:
   # `false` because running pytest within pytest.

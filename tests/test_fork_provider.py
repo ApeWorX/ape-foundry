@@ -1,4 +1,3 @@
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -48,8 +47,7 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
 
 
-# TODO: Remove `in` check once goerli removed from core.
-@pytest.mark.parametrize("network", [k for k in NETWORKS.keys() if k not in ("goerli",)])
+@pytest.mark.parametrize("network", NETWORKS)
 def test_fork_config(name, config, network):
     plugin_config = config.get_config(name)
     network_config = plugin_config["fork"].get("ethereum", {}).get(network, {})
@@ -78,17 +76,14 @@ def test_mainnet_impersonate(accounts, mainnet_fork_provider):
 
 
 @pytest.mark.fork
-def test_request_timeout(networks, config, mainnet_fork_provider):
+def test_request_timeout(networks, project, mainnet_fork_provider):
     actual = mainnet_fork_provider.web3.provider._request_kwargs["timeout"]
     expected = 360  # Value set in `ape-config.yaml`
     assert actual == expected
 
     # Test default behavior
-    # TODO: Use `ape.utils.use_tempdir()` (once released)
-    with tempfile.TemporaryDirectory() as temp_dir_str:
-        temp_dir = Path(temp_dir_str).resolve()
-        with config.using_project(temp_dir):
-            assert networks.active_provider.timeout == 300
+    with project.temp_config(foundry={"fork_request_timeout": 300}):
+        assert networks.active_provider.timeout == 300
 
 
 @pytest.mark.fork

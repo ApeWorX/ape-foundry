@@ -15,7 +15,7 @@ ContractA\.methodWithoutArguments\(\) -> 0x00\.\.93bc \[\d+ gas\]
 │         333399998888882,
 │         234545457847457457458457457457
 │       \]
-│     \] \[\d+ gas\]
+│   \] \[\d+ gas\]
 ├── SYMBOL\.methodB1\(lolol="ice-cream", dynamo=345457847457457458457457457\) \[\d+ gas\]
 │   ├── ContractC\.getSomeList\(\) -> \[
 │   │     3425311345134513461345134534531452345,

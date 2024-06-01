@@ -3,10 +3,8 @@ import random
 import shutil
 from bisect import bisect_right
 from copy import copy
-from itertools import tee
-from pathlib import Path
 from subprocess import PIPE, call
-from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, cast
+from typing import Literal, Optional, Union, cast
 
 from ape.api import (
     BlockAPI,
@@ -15,6 +13,7 @@ from ape.api import (
     ReceiptAPI,
     SubprocessProvider,
     TestProviderAPI,
+    TraceAPI,
     TransactionAPI,
 )
 from ape.exceptions import (
@@ -25,24 +24,14 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import (
-    AddressType,
-    BlockID,
-    CallTreeNode,
-    ContractCode,
-    SnapshotID,
-    SourceTraceback,
-    TraceFrame,
-)
+from ape.types import AddressType, BlockID, ContractCode, SnapshotID
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
+from ape_ethereum.trace import TraceApproach, TransactionTrace
 from ape_test import ApeTestConfig
 from eth_pydantic_types import HashBytes32, HexBytes
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
-from evm_trace import CallType, ParityTraceList
-from evm_trace import TraceFrame as EvmTraceFrame
-from evm_trace import get_calltree_from_geth_trace, get_calltree_from_parity_trace
 from pydantic import field_validator, model_validator
 from pydantic_settings import SettingsConfigDict
 from web3 import HTTPProvider, Web3
@@ -94,7 +83,7 @@ class FoundryNetworkConfig(PluginConfig):
     # For setting the values in --fork and --fork-block-number command arguments.
     # Used only in FoundryForkProvider.
     # Mapping of ecosystem_name => network_name => FoundryForkConfig
-    fork: Dict[str, Dict[str, FoundryForkConfig]] = {}
+    fork: dict[str, dict[str, FoundryForkConfig]] = {}
 
     disable_block_gas_limit: bool = False
     """
@@ -126,12 +115,12 @@ def _call(*args):
 
 class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     _host: Optional[str] = None
-    attempted_ports: List[int] = []
+    attempted_ports: list[int] = []
     cached_chain_id: Optional[int] = None
     _did_warn_wrong_node = False
 
     @property
-    def unlocked_accounts(self) -> List[AddressType]:
+    def unlocked_accounts(self) -> list[AddressType]:
         return list(self.account_manager.test_accounts._impersonated_accounts)
 
     @property
@@ -190,10 +179,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             )
 
         return anvil
-
-    @property
-    def project_folder(self) -> Path:
-        return self.config_manager.PROJECT_FOLDER
 
     @property
     def uri(self) -> str:
@@ -256,19 +241,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def auto_mine(self) -> bool:
-        return self._make_request("anvil_getAutomine", [])
+        return self.make_request("anvil_getAutomine", [])
+
+    @auto_mine.setter
+    def auto_mine(self, value) -> None:
+        self.make_request("anvil_setAutomine", [value])
 
     @property
     def settings(self) -> FoundryNetworkConfig:
         return cast(FoundryNetworkConfig, super().settings)
-
-    def __setattr__(self, attr: str, value: Any) -> None:
-        # NOTE: Need to do this until https://github.com/pydantic/pydantic/pull/2625 is figured out
-        if attr == "auto_mine":
-            self._make_request("anvil_setAutomine", [value])
-
-        else:
-            super().__setattr__(attr, value)
 
     def connect(self):
         """
@@ -429,7 +410,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._host = None
         super().disconnect()
 
-    def build_command(self) -> List[str]:
+    def build_command(self) -> list[str]:
         cmd = [
             self.anvil_bin,
             "--port",
@@ -475,32 +456,32 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         elif isinstance(amount, int) or isinstance(amount, bytes):
             amount_hex_str = to_hex(amount)
 
-        self._make_request("anvil_setBalance", [account, amount_hex_str])
+        self.make_request("anvil_setBalance", [account, amount_hex_str])
 
     def set_timestamp(self, new_timestamp: int):
-        self._make_request("evm_setNextBlockTimestamp", [new_timestamp])
+        self.make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
     def mine(self, num_blocks: int = 1):
         # NOTE: Request fails when given numbers with any left padded 0s.
         num_blocks_arg = f"0x{HexBytes(num_blocks).hex().replace('0x', '').lstrip('0')}"
-        self._make_request("anvil_mine", [num_blocks_arg])
+        self.make_request("anvil_mine", [num_blocks_arg])
 
     def snapshot(self) -> str:
-        return self._make_request("evm_snapshot", [])
+        return self.make_request("evm_snapshot", [])
 
-    def revert(self, snapshot_id: SnapshotID) -> bool:
+    def restore(self, snapshot_id: SnapshotID) -> bool:
         if isinstance(snapshot_id, int):
             snapshot_id = HexBytes(snapshot_id).hex()
 
-        result = self._make_request("evm_revert", [snapshot_id])
+        result = self.make_request("evm_revert", [snapshot_id])
         return result is True
 
     def unlock_account(self, address: AddressType) -> bool:
-        self._make_request("anvil_impersonateAccount", [address])
+        self.make_request("anvil_impersonateAccount", [address])
         return True
 
     def relock_account(self, address: AddressType):
-        self._make_request("anvil_stopImpersonatingAccount", [address])
+        self.make_request("anvil_stopImpersonatingAccount", [address])
         if address in self.account_manager.test_accounts._impersonated_accounts:
             del self.account_manager.test_accounts._impersonated_accounts[address]
 
@@ -581,137 +562,26 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.chain_manager.history.append(receipt)
         return receipt
 
-    def send_call(
-        self,
-        txn: TransactionAPI,
-        block_id: Optional[BlockID] = None,
-        state: Optional[Dict] = None,
-        **kwargs,
-    ) -> HexBytes:
-        if block_id is not None:
-            kwargs["block_identifier"] = block_id
-        if state is not None:
-            kwargs["state_override"] = state
-        skip_trace = kwargs.pop("skip_trace", False)
-        arguments = self._prepare_call(txn, **kwargs)
-
-        if skip_trace:
-            return self._eth_call(arguments)
-
-        show_gas = kwargs.pop("show_gas_report", False)
-        show_trace = kwargs.pop("show_trace", False)
-
-        if self._test_runner is not None:
-            track_gas = self._test_runner.gas_tracker.enabled
-            track_coverage = self._test_runner.coverage_tracker.enabled
-        else:
-            track_gas = False
-            track_coverage = False
-
-        needs_trace = track_gas or track_coverage or show_gas or show_trace
-        if not needs_trace:
-            return self._eth_call(arguments)
-
-        # The user is requesting information related to a call's trace,
-        # such as gas usage data.
-
-        if "type" in arguments[0] and isinstance(arguments[0]["type"], int):
-            arguments[0]["type"] = to_hex(arguments[0]["type"])
-
-        result, trace_frames = self._trace_call(arguments)
-        trace_frames, frames_copy = tee(trace_frames)
-        return_value = HexBytes(result["returnValue"])
-        root_node_kwargs = {
-            "gas_cost": result.get("gas", 0),
-            "address": txn.receiver,
-            "calldata": txn.data,
-            "value": txn.value,
-            "call_type": CallType.CALL,
-            "failed": False,
-            "returndata": return_value,
-        }
-
-        evm_call_tree = get_calltree_from_geth_trace(trace_frames, **root_node_kwargs)
-
-        # NOTE: Don't pass txn_hash here, as it will fail (this is not a real txn).
-        call_tree = self._create_call_tree_node(evm_call_tree)
-
-        receiver = txn.receiver
-        if track_gas and show_gas and not show_trace:
-            # Optimization to enrich early and in_place=True.
-            call_tree.enrich()
-
-        if track_gas and call_tree and receiver is not None and self._test_runner is not None:
-            # Gas report being collected, likely for showing a report
-            # at the end of a test run.
-            # Use `in_place=False` in case also `show_trace=True`
-            enriched_call_tree = call_tree.enrich(in_place=False)
-            self._test_runner.gas_tracker.append_gas(enriched_call_tree, receiver)
-
-        if track_coverage and self._test_runner is not None and receiver:
-            contract_type = self.chain_manager.contracts.get(receiver)
-            if contract_type:
-                traceframes = (self._create_trace_frame(x) for x in frames_copy)
-                method_id = HexBytes(txn.data)
-                selector = (
-                    contract_type.methods[method_id].selector
-                    if method_id in contract_type.methods
-                    else None
-                )
-                source_traceback = SourceTraceback.create(contract_type, traceframes, method_id)
-                self._test_runner.coverage_tracker.cover(
-                    source_traceback, function=selector, contract=contract_type.name
-                )
-
-        if show_gas:
-            enriched_call_tree = call_tree.enrich(in_place=False)
-            self.chain_manager._reports.show_gas(enriched_call_tree)
-
-        if show_trace:
-            call_tree = call_tree.enrich(use_symbol_for_tokens=True)
-            self.chain_manager._reports.show_trace(call_tree)
-
-        return return_value
-
-    def _trace_call(self, arguments: List[Any]) -> Tuple[Dict, Iterator[EvmTraceFrame]]:
-        result = self._make_request("debug_traceCall", arguments)
-        trace_data = result.get("structLogs", [])
-        return result, (EvmTraceFrame(**f) for f in trace_data)
-
     def get_balance(self, address: AddressType, block_id: Optional[BlockID] = None) -> int:
         if hasattr(address, "address"):
             address = address.address
 
-        result = self._make_request("eth_getBalance", [address, "latest"])
+        result = self.make_request("eth_getBalance", [address, block_id])
         if not result:
             raise FoundryProviderError(f"Failed to get balance for account '{address}'.")
 
         return int(result, 16) if isinstance(result, str) else result
 
-    def get_transaction_trace(self, txn_hash: str) -> Iterator[TraceFrame]:
-        for trace in self._get_transaction_trace(txn_hash):
-            yield self._create_trace_frame(trace)
+    def get_transaction_trace(self, transaction_hash: str, **kwargs) -> TraceAPI:
+        if "debug_trace_transaction_parameters" not in kwargs:
+            kwargs["debug_trace_transaction_parameters"] = {
+                "stepsTracing": True,
+                "enableMemory": True,
+            }
+        if "call_trace_approach" not in kwargs:
+            kwargs["call_trace_approach"] = TraceApproach.PARITY
 
-    def _get_transaction_trace(
-        self, txn_hash: str, steps_tracing: bool = True, enable_memory: bool = True
-    ) -> Iterator[EvmTraceFrame]:
-        result = self._make_request(
-            "debug_traceTransaction",
-            [txn_hash, {"stepsTracing": steps_tracing, "enableMemory": enable_memory}],
-        )
-        frames = result.get("structLogs", [])
-        for frame in frames:
-            yield EvmTraceFrame(**frame)
-
-    def get_call_tree(self, txn_hash: str) -> CallTreeNode:
-        raw_trace_list = self._make_request("trace_transaction", [txn_hash])
-        trace_list = ParityTraceList.model_validate(raw_trace_list)
-
-        if not trace_list:
-            raise FoundryProviderError(f"No trace found for transaction '{txn_hash}'")
-
-        evm_call = get_calltree_from_parity_trace(trace_list)
-        return self._create_call_tree_node(evm_call, txn_hash=txn_hash)
+        return _get_transaction_trace(transaction_hash, **kwargs)
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
         if not len(exception.args):
@@ -760,10 +630,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         elif message.lower() == "execution reverted":
             message = TransactionError.DEFAULT_MESSAGE
             if isinstance(exception, Web3ContractLogicError) and (
-                msg := _extract_custom_error(self, **kwargs)
+                msg := self._extract_custom_error(**kwargs)
             ):
-                if msg not in ("", "0x", None):
-                    message = msg
+                exception.message = msg
+
             return _handle_execution_reverted(exception, revert_message=message, **kwargs)
 
         elif message == "Transaction ran out of gas" or "OutOfGas" in message:
@@ -783,8 +653,28 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return VirtualMachineError(message, **kwargs)
 
+    # Abstracted for easier testing conditions.
+    def _extract_custom_error(self, **kwargs) -> str:
+        # Check for custom error.
+        trace = None
+        if "trace" in kwargs:
+            trace = kwargs["trace"]
+
+        elif "txn" in kwargs:
+            txn = kwargs["txn"]
+            try:
+                txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else txn.txn_hash.hex()
+                trace = self.get_transaction_trace(txn_hash)
+            except Exception:
+                pass
+
+        if trace is not None and (revert_msg := trace.revert_message):
+            return revert_msg
+
+        return ""
+
     def set_block_gas_limit(self, gas_limit: int) -> bool:
-        return self._make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
+        return self.make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
 
     def set_code(self, address: AddressType, code: ContractCode) -> bool:
         if isinstance(code, bytes):
@@ -796,11 +686,11 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         elif not is_hex(code):
             raise ValueError(f"Value {code} is not convertible to hex")
 
-        self._make_request("anvil_setCode", [address, code])
+        self.make_request("anvil_setCode", [address, code])
         return True
 
     def set_storage(self, address: AddressType, slot: int, value: HexBytes):
-        self._make_request(
+        self.make_request(
             "anvil_setStorageAt",
             [
                 address,
@@ -809,45 +699,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             ],
         )
 
-    def _eth_call(self, arguments: List) -> HexBytes:
-        # Override from Web3Provider because foundry is pickier.
-
+    def _eth_call(self, arguments: list) -> HexBytes:
+        # Overridden to handle unique Foundry pickiness.
         txn_dict = copy(arguments[0])
         if isinstance(txn_dict.get("type"), int):
             txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
 
         txn_dict.pop("chainId", None)
         arguments[0] = txn_dict
-        trace = None
-
-        try:
-            result = self._make_request("eth_call", arguments)
-        except Exception as err:
-            contract_address = arguments[0].get("to") if len(arguments) > 0 else None
-            tb = None
-            if contract_address:
-                try:
-                    trace, trace2 = tee(
-                        self._create_trace_frame(x) for x in self._trace_call(arguments)[1]
-                    )
-                    contract_type = self.chain_manager.contracts.get(contract_address)
-                    method_id = arguments[0].get("data", "")[:10] or None
-                    tb = (
-                        SourceTraceback.create(contract_type, trace2, method_id)
-                        if method_id and contract_type
-                        else None
-                    )
-                except Exception as sub_err:
-                    logger.error(f"Error getting source traceback: {sub_err}")
-
-            if trace is None:
-                trace = (self._create_trace_frame(x) for x in self._trace_call(arguments)[1])
-
-            raise self.get_virtual_machine_error(
-                err, trace=trace, contract_address=contract_address, source_traceback=tb
-            ) from err
-
-        return HexBytes(result)
+        return super()._eth_call(arguments)
 
 
 class FoundryForkProvider(FoundryProvider):
@@ -869,7 +729,7 @@ class FoundryForkProvider(FoundryProvider):
         plugin_config = cls.config_manager.get_config(value["name"])
         config_settings = plugin_config.get("fork", {})
 
-        def _get_upstream(data: Dict) -> Optional[str]:
+        def _get_upstream(data: dict) -> Optional[str]:
             return (
                 data.get(ecosystem_name, {})
                 .get(network.name.replace("-fork", ""), {})
@@ -968,7 +828,7 @@ class FoundryForkProvider(FoundryProvider):
                 "This could be an issue with foundry."
             )
 
-    def build_command(self) -> List[str]:
+    def build_command(self) -> list[str]:
         if not self.fork_url:
             raise FoundryProviderError("Upstream provider does not have a ``connection_str``.")
 
@@ -991,37 +851,16 @@ class FoundryForkProvider(FoundryProvider):
         return cmd
 
     def reset_fork(self, block_number: Optional[int] = None):
-        forking_params: Dict[str, Union[str, int]] = {"jsonRpcUrl": self.fork_url}
+        forking_params: dict[str, Union[str, int]] = {"jsonRpcUrl": self.fork_url}
         block_number = block_number if block_number is not None else self.fork_block_number
         if block_number is not None:
             forking_params["blockNumber"] = block_number
 
         # # Rest the fork
-        result = self._make_request("anvil_reset", [{"forking": forking_params}])
+        result = self.make_request("anvil_reset", [{"forking": forking_params}])
         return result
 
 
-# Abstracted for easier testing conditions.
-def _extract_custom_error(provider: FoundryProvider, **kwargs) -> str:
-    data = {}
-    if "trace" in kwargs:
-        kwargs["trace"], new_trace = tee(kwargs["trace"])
-        data = list(new_trace)[-1].raw
-
-    elif "txn" in kwargs:
-        txn = kwargs["txn"]
-        txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else txn.txn_hash.hex()
-        try:
-            trace = list(provider._get_transaction_trace(txn_hash))[-1]
-        except Exception:
-            return ""
-
-        data = trace.model_dump(by_alias=True, mode="json") if trace else {}
-
-    if data and data.get("op") == "REVERT":
-        memory = data.get("memory", [])
-        custom_err = "".join([x[2:] for x in memory[4:]])
-        if custom_err:
-            return f"0x{custom_err}"
-
-    return ""
+def _get_transaction_trace(transaction_hash: str, **kwargs) -> TraceAPI:
+    # Abstracted for testing purposes.
+    return TransactionTrace(transaction_hash=transaction_hash, **kwargs)

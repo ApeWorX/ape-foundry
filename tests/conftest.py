@@ -1,24 +1,21 @@
-import json
 import os
-import tempfile
+import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Dict, Optional
 
 import ape
 import pytest
-import yaml
 from _pytest.runner import pytest_runtest_makereport as orig_pytest_runtest_makereport
 from ape.contracts import ContractContainer
 from ape.exceptions import APINotImplementedError, UnknownSnapshotError
-from ape.managers.config import CONFIG_FILE_NAME
 from ethpm_types import ContractType
 
 from ape_foundry import FoundryProvider
 
 # NOTE: Ensure that we don't use local paths for the DATA FOLDER
-ape.config.DATA_FOLDER = Path(mkdtemp()).resolve()
+DATA_FOLDER = Path(mkdtemp()).resolve()
+ape.config.DATA_FOLDER = DATA_FOLDER
 
 BASE_CONTRACTS_PATH = Path(__file__).parent / "data" / "contracts"
 LOCAL_CONTRACTS_PATH = BASE_CONTRACTS_PATH / "ethereum" / "local"
@@ -45,9 +42,9 @@ def name():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def in_tests_dir(config):
-    with config.using_project(Path(__file__).parent):
-        yield
+def clean_datafodler(config):
+    yield  # Run all collected tests.
+    shutil.rmtree(DATA_FOLDER, ignore_errors=True)
 
 
 @contextmanager
@@ -240,33 +237,6 @@ def sepolia_fork_provider(name, ethereum, sepolia_fork_port):
         name, provider_settings={"host": f"http://127.0.0.1:{sepolia_fork_port}"}
     ) as provider:
         yield provider
-
-
-@pytest.fixture(scope="session")
-def temp_config(config):
-    @contextmanager
-    def func(data: Dict, package_json: Optional[Dict] = None):
-        # TODO: Use `ape.utils.use_tempdir()` (once released)
-        with tempfile.TemporaryDirectory() as temp_dir_str:
-            temp_dir = Path(temp_dir_str).resolve()
-
-            config._cached_configs = {}
-            config_file = temp_dir / CONFIG_FILE_NAME
-            config_file.touch()
-            config_file.write_text(yaml.dump(data))
-            config.load(force_reload=True)
-
-            if package_json:
-                package_json_file = temp_dir / "package.json"
-                package_json_file.write_text(json.dumps(package_json))
-
-            with config.using_project(temp_dir):
-                yield temp_dir
-
-            config_file.unlink()
-            config._cached_configs = {}
-
-    return func
 
 
 @pytest.fixture

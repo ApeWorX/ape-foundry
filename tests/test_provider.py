@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from ape import convert
 from ape.api import TraceAPI
 from ape.api.accounts import ImpersonatedAccount
 from ape.contracts import ContractContainer
@@ -13,7 +14,7 @@ from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID, FoundryNetworkConfig
+from ape_foundry.provider import FOUNDRY_CHAIN_ID
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -445,6 +446,9 @@ def test_disable_block_gas_limit(project, disconnected_provider):
         assert "--disable-block-gas-limit" in cmd
 
 
-def test_fork_config_none():
-    cfg = FoundryNetworkConfig.model_validate({"fork": None})
-    assert isinstance(cfg["fork"], dict)
+def test_initial_balance(accounts):
+    # The value is set in the config, but checking it can be less just in case.
+    # The regular default value is 10_000 so hopefully it isn't below that,
+    # just showing we were able to increase it.
+    acct = accounts[9]
+    assert convert("10_000 ETH", int) < acct.balance <= convert("100_000 ETH", int)

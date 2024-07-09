@@ -39,3 +39,5 @@ test:
   gas:
     exclude:
       - method_name: setAdd*
+
+  balance: 100_000 ETH

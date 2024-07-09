@@ -132,6 +132,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self._test_config.number_of_accounts
 
     @property
+    def initial_balance(self) -> int:
+        """
+        Have to convert the WEI value to ETH, like Anvil expects.
+        """
+        bal_in_wei = self._test_config.balance
+        return bal_in_wei // 10**18
+
+    @property
     def process_name(self) -> str:
         return "anvil"
 
@@ -421,6 +429,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             f"{self.number_of_accounts}",
             "--derivation-path",
             f"{self.test_config.hd_path}",
+            "--balance",
+            f"{self.initial_balance}",
             "--steps-tracing",
             "--block-base-fee-per-gas",
             f"{self.settings.base_fee}",

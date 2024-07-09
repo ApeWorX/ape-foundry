@@ -6,6 +6,8 @@ from ape.contracts import ContractInstance
 from ape.exceptions import ContractLogicError
 from ape_ethereum.ecosystem import NETWORKS
 
+from ape_foundry import FoundryNetworkConfig
+
 TESTS_DIRECTORY = Path(__file__).parent
 TEST_ADDRESS = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
 
@@ -224,3 +226,8 @@ def test_contract_interaction(mainnet_fork_provider, owner, mainnet_fork_contrac
 
     # Verify the estimate gas RPC was not used (since we are using max_gas).
     assert estimate_gas_spy.call_count == 0
+
+
+def test_fork_config_none():
+    cfg = FoundryNetworkConfig.model_validate({"fork": None})
+    assert isinstance(cfg["fork"], dict)

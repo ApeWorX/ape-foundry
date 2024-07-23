@@ -268,6 +268,11 @@ def test_revert_error_using_impersonated_account(error_contract, accounts, conne
     with pytest.raises(error_contract.Unauthorized):
         error_contract.withdraw(sender=acct)
 
+    # Show we can "allow" reverts using impersonated accounts.
+    # NOTE: This is extra because of the lack of tx-hash available.
+    receipt = error_contract.withdraw(sender=acct, raise_on_revert=False)
+    assert receipt.failed
+
 
 def test_revert_allow(error_contract, not_owner, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)

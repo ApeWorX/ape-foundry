@@ -269,6 +269,16 @@ def test_revert_error_using_impersonated_account(error_contract, accounts, conne
         error_contract.withdraw(sender=acct)
 
 
+def test_revert_allow(error_contract, not_owner, contract_instance):
+    # 'sender' is not the owner so it will revert (with a message)
+    receipt = error_contract.withdraw(sender=not_owner, raise_on_revert=False)
+    assert receipt.error is not None
+    assert isinstance(receipt.error, error_contract.Unauthorized)
+
+    # Ensure this also works for calls.
+    contract_instance.setNumber.call(5, raise_on_revert=False)
+
+
 @pytest.mark.parametrize("host", ("https://example.com", "example.com"))
 def test_host(project, local_network, host):
     with project.temp_config(foundry={"host": host}):

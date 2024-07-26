@@ -447,6 +447,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if self.settings.disable_block_gas_limit:
             cmd.append("--disable-block-gas-limit")
 
+        if self.network.ecosystem.name in ("optimism", "base"):
+            cmd.append("--optimism")
+
         return cmd
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):

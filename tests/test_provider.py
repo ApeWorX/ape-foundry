@@ -467,3 +467,12 @@ def test_initial_balance(accounts):
     # just showing we were able to increase it.
     acct = accounts[9]
     assert convert("10_000 ETH", int) < acct.balance <= convert("100_000 ETH", int)
+
+
+def test_optimism(networks):
+    with networks.optimism.local.use_provider(
+        "foundry", provider_settings={"port": 9545}
+    ) as provider:
+        assert provider.is_connected
+        cmd = provider.build_command()
+        assert "--optimism" in cmd

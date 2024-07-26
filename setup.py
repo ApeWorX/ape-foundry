@@ -11,6 +11,7 @@ extras_require = {
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
         "ape-alchemy",  # For running fork tests
         "ape-polygon",  # For running polygon fork tests
+        "ape-optimism",  # For Optimism integration tests
     ],
     "lint": [
         "black>=24.4.2,<25",  # Auto-formatter and linter

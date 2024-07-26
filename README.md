@@ -141,7 +141,7 @@ foundry:
   priority_fee: 0
 ```
 
-# Auto-mining
+## Auto-mining
 
 Anvil nodes by default auto-mine.
 However, you can disable auto-mining on startup by configuring the foundry plugin like so:
@@ -168,4 +168,23 @@ To mine on an interval instead, set the `block_time` config:
 ```yaml
 foundry:
   block_time: 10  # mine a new block every 10 seconds
+```
+
+## EVM Version (hardfork)
+
+To change the EVM version for local foundry networks, use the `evm_version` config:
+
+```yaml
+foundry:
+  evm_version: shanghai
+```
+
+To change the EVM version for forked networks, set it the specific forked-network config(s):
+
+```yaml
+foundry:
+  fork:
+    ethereum:
+      mainnet:
+        evm_version: shanghai
 ```

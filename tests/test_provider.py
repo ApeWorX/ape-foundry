@@ -474,3 +474,12 @@ def test_initial_balance(accounts):
     # just showing we were able to increase it.
     acct = accounts[9]
     assert convert("10_000 ETH", int) < acct.balance <= convert("100_000 ETH", int)
+
+
+@pytest.mark.parametrize("host", ("https://example.com", "example.com"))
+def test_evm_version(project, local_network, host):
+    with project.temp_config(foundry={"evm_version": "shanghai"}):
+        provider = local_network.get_provider("foundry")
+        cmd = provider.build_command()
+        assert "--hardfork" in cmd
+        assert "shanghai" in cmd

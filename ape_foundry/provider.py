@@ -70,6 +70,9 @@ class FoundryNetworkConfig(PluginConfig):
     Defaults to ``True``. If ``host`` is remote, will not be able to start.
     """
 
+    evm_version: Optional[str] = None
+    """The EVM hardfork to use, e.g. `shanghai`."""
+
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
     request_timeout: int = 30
     fork_request_timeout: int = 300
@@ -254,6 +257,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     @auto_mine.setter
     def auto_mine(self, value) -> None:
         self.make_request("anvil_setAutomine", [value])
+
+    @property
+    def evm_version(self) -> Optional[str]:
+        return self.settings.evm_version
 
     @property
     def settings(self) -> FoundryNetworkConfig:
@@ -446,6 +453,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if self.settings.disable_block_gas_limit:
             cmd.append("--disable-block-gas-limit")
+
+        if evm_version := self.evm_version:
+            cmd.extend(("--hardfork", evm_version))
 
         return cmd
 
@@ -772,6 +782,13 @@ class FoundryForkProvider(FoundryProvider):
     def fork_block_number(self) -> Optional[int]:
         return self._fork_config.block_number
 
+    @property
+    def evm_version(self) -> Optional[str]:
+        if evm_version := self._fork_config.evm_version:
+            return evm_version
+
+        return self.settings.evm_version
+
     def get_block(self, block_id: BlockID) -> BlockAPI:
         if isinstance(block_id, str) and block_id.isnumeric():
             block_id = int(block_id)
@@ -870,9 +887,6 @@ class FoundryForkProvider(FoundryProvider):
 
             if self._fork_config.evm_version is None:
                 self._fork_config.evm_version = self.detect_evm_version()
-
-        if self._fork_config.evm_version is not None:
-            cmd.extend(("--hardfork", self._fork_config.evm_version))
 
         return cmd
 

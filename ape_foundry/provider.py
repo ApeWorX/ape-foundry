@@ -57,6 +57,8 @@ FOUNDRY_CHAIN_ID = 31337
 class FoundryForkConfig(PluginConfig):
     upstream_provider: Optional[str] = None
     block_number: Optional[int] = None
+
+    # TODO: Delete in 0.9 release
     evm_version: Optional[str] = None
 
 

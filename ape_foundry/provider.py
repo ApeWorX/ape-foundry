@@ -70,6 +70,9 @@ class FoundryNetworkConfig(PluginConfig):
     Defaults to ``True``. If ``host`` is remote, will not be able to start.
     """
 
+    evm_version: Optional[str] = None
+    """The EVM hardfork to use, e.g. `shanghai`."""
+
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
     request_timeout: int = 30
     fork_request_timeout: int = 300
@@ -419,6 +422,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         super().disconnect()
 
     def build_command(self) -> list[str]:
+        cmd = self._build_command()
+
+        if evm_version := self.settings.evm_version:
+            cmd.extend(("--hardfork", evm_version))
+
+        return cmd
+
+    def _build_command(self) -> list[str]:
+        # All shared between forks and local.
         cmd = [
             self.anvil_bin,
             "--port",

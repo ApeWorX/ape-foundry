@@ -5,7 +5,7 @@ from ape import convert
 from ape.api import TraceAPI
 from ape.api.accounts import ImpersonatedAccount
 from ape.contracts import ContractContainer
-from ape.exceptions import ContractLogicError, TransactionError
+from ape.exceptions import ContractLogicError, TransactionError, VirtualMachineError
 from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HashBytes32
@@ -346,6 +346,13 @@ def test_get_virtual_machine_error_from_contract_logic_message_includes_base_err
     actual = connected_provider.get_virtual_machine_error(exception)
     assert isinstance(actual, ContractLogicError)
     assert actual.base_err == exception
+
+
+def test_get_virtual_machine_error_first_arg_not_message(connected_provider):
+    # Handling weird edge case I have not seen in the wild but was raised in a GH issue.
+    exception = Exception(Exception())
+    actual = connected_provider.get_virtual_machine_error(exception)
+    assert isinstance(actual, VirtualMachineError)
 
 
 def test_no_mining(project, local_network, connected_provider):

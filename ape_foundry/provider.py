@@ -457,6 +457,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if evm_version := self.evm_version:
             cmd.extend(("--hardfork", evm_version))
 
+        if self.network.ecosystem.name in ("optimism", "base"):
+            cmd.append("--optimism")
+
         return cmd
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):

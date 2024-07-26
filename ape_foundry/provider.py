@@ -504,6 +504,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if sender:
             sender = self.conversion_manager.convert(txn.sender, AddressType)
 
+        vm_err = None
         if sender and sender in self.unlocked_accounts:
             # Allow for an unsigned transaction
             txn = self.prepare_transaction(txn)
@@ -526,7 +527,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 if "nonce too low" in str(vm_err):
                     # Add additional nonce information
                     new_err_msg = f"Nonce '{txn.nonce}' is too low"
-                    raise VirtualMachineError(
+                    vm_err = VirtualMachineError(
                         new_err_msg,
                         base_err=vm_err.base_err,
                         code=vm_err.code,
@@ -536,7 +537,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         contract_address=vm_err.contract_address,
                     )
 
-                raise vm_err from err
+                txn_hash = txn.txn_hash
+                if txn.raise_on_revert:
+                    raise vm_err from err
 
         receipt = self.get_receipt(
             txn_hash.hex(),
@@ -546,6 +549,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 else self.network.required_confirmations
             ),
         )
+        if vm_err:
+            receipt.error = vm_err
 
         if receipt.failed:
             txn_dict = receipt.transaction.model_dump(mode="json", by_alias=True)
@@ -563,11 +568,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 self.web3.eth.call(txn_params)
             except Exception as err:
                 vm_err = self.get_virtual_machine_error(err, txn=receipt)
-                raise vm_err from err
+                receipt.error = vm_err
+                if txn.raise_on_revert:
+                    raise vm_err from err
 
-            # If we get here, for some reason the tx-replay did not produce
-            # a VM error.
-            receipt.raise_for_status()
+            if txn.raise_on_revert:
+                # If we get here, for some reason the tx-replay did not produce
+                # a VM error.
+                receipt.raise_for_status()
 
         self.chain_manager.history.append(receipt)
         return receipt
@@ -709,7 +717,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             ],
         )
 
-    def _eth_call(self, arguments: list) -> HexBytes:
+    def _eth_call(self, arguments: list, raise_on_revert: bool = True) -> HexBytes:
         # Overridden to handle unique Foundry pickiness.
         txn_dict = copy(arguments[0])
         if isinstance(txn_dict.get("type"), int):
@@ -717,7 +725,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         txn_dict.pop("chainId", None)
         arguments[0] = txn_dict
-        return super()._eth_call(arguments)
+        return super()._eth_call(arguments, raise_on_revert=raise_on_revert)
 
 
 class FoundryForkProvider(FoundryProvider):

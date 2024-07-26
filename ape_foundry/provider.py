@@ -606,7 +606,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return VirtualMachineError(base_err=exception, **kwargs)
 
         err_data = exception.args[0]
-        message = str(err_data.get("message")) if isinstance(err_data, dict) else err_data
+        message: str = str(err_data.get("message")) if isinstance(err_data, dict) else f"{err_data}"
 
         if not message:
             return VirtualMachineError(base_err=exception, **kwargs)

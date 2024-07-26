@@ -877,6 +877,8 @@ class FoundryForkProvider(FoundryProvider):
 
         if self._fork_config.evm_version is not None:
             cmd.extend(("--hardfork", self._fork_config.evm_version))
+        elif self.settings.evm_version is not None:
+            cmd.extend(("--hardfork", self.settings.evm_version))
 
         return cmd
 

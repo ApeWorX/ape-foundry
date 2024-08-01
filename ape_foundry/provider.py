@@ -489,20 +489,20 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)
-        _is_hex = False if not is_str else is_0x_prefixed(str(amount))
-        is_key_word = is_str and len(str(amount).split(" ")) > 1
+        is_key_word = is_str and " " in amount
+        _is_hex = is_str and not is_key_word and is_0x_prefixed(amount)
+
         if is_key_word:
             # This allows values such as "1000 ETH".
             amount = self.conversion_manager.convert(amount, int)
             is_str = False
 
-        amount_hex_str = str(amount)
-
-        # Convert to hex str
         if is_str and not _is_hex:
             amount_hex_str = to_hex(int(amount))
-        elif isinstance(amount, int) or isinstance(amount, bytes):
+        elif isinstance(amount, (int, bytes)):
             amount_hex_str = to_hex(amount)
+        else:
+            amount_hex_str = str(amount)
 
         self.make_request("anvil_setBalance", [account, amount_hex_str])
 
@@ -518,9 +518,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return self.make_request("evm_snapshot", [])
 
     def restore(self, snapshot_id: SnapshotID) -> bool:
-        if isinstance(snapshot_id, int):
-            snapshot_id = HexBytes(snapshot_id).hex()
-
+        snapshot_id = to_hex(snapshot_id) if isinstance(snapshot_id, int) else snapshot_id
         result = self.make_request("evm_revert", [snapshot_id])
         return result is True
 
@@ -530,103 +528,12 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def relock_account(self, address: AddressType):
         self.make_request("anvil_stopImpersonatingAccount", [address])
-        if address in self.account_manager.test_accounts._impersonated_accounts:
-            del self.account_manager.test_accounts._impersonated_accounts[address]
-
-    def send_transaction(self, txn: TransactionAPI) -> ReceiptAPI:
-        """
-        Creates a new message call transaction or a contract creation
-        for signed transactions.
-        """
-        sender = txn.sender
-        if sender:
-            sender = self.conversion_manager.convert(txn.sender, AddressType)
-
-        vm_err = None
-        if sender and sender in self.unlocked_accounts:
-            # Allow for an unsigned transaction
-            txn = self.prepare_transaction(txn)
-            txn_dict = txn.model_dump(mode="json", by_alias=True)
-            if isinstance(txn_dict.get("type"), int):
-                txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
-
-            tx_params = cast(TxParams, txn_dict)
-            try:
-                txn_hash = self.web3.eth.send_transaction(tx_params)
-            except ValueError as err:
-                raise self.get_virtual_machine_error(err, txn=txn) from err
-
-        else:
-            try:
-                txn_hash = self.web3.eth.send_raw_transaction(txn.serialize_transaction())
-            except ValueError as err:
-                vm_err = self.get_virtual_machine_error(err, txn=txn)
-
-                if "nonce too low" in str(vm_err):
-                    # Add additional nonce information
-                    new_err_msg = f"Nonce '{txn.nonce}' is too low"
-                    vm_err = VirtualMachineError(
-                        new_err_msg,
-                        base_err=vm_err.base_err,
-                        code=vm_err.code,
-                        txn=txn,
-                        source_traceback=vm_err.source_traceback,
-                        trace=vm_err.trace,
-                        contract_address=vm_err.contract_address,
-                    )
-
-                txn_hash = txn.txn_hash
-                if txn.raise_on_revert:
-                    raise vm_err from err
-
-        receipt = self.get_receipt(
-            txn_hash.hex(),
-            required_confirmations=(
-                txn.required_confirmations
-                if txn.required_confirmations is not None
-                else self.network.required_confirmations
-            ),
-        )
-        if vm_err:
-            receipt.error = vm_err
-
-        if receipt.failed:
-            txn_dict = receipt.transaction.model_dump(mode="json", by_alias=True)
-            if isinstance(txn_dict.get("type"), int):
-                txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
-
-            txn_params = cast(TxParams, txn_dict)
-
-            # Replay txn to get revert reason
-            # NOTE: For some reason, `nonce` can't be in the txn params or else it fails.
-            if "nonce" in txn_params:
-                del txn_params["nonce"]
-
-            try:
-                self.web3.eth.call(txn_params)
-            except Exception as err:
-                vm_err = self.get_virtual_machine_error(err, txn=receipt)
-                receipt.error = vm_err
-                if txn.raise_on_revert:
-                    raise vm_err from err
-
-            if txn.raise_on_revert:
-                # If we get here, for some reason the tx-replay did not produce
-                # a VM error.
-                receipt.raise_for_status()
-
-        self.chain_manager.history.append(receipt)
-        return receipt
 
     def get_balance(self, address: AddressType, block_id: Optional[BlockID] = None) -> int:
-        if hasattr(address, "address"):
-            address = address.address
+        if result := self.make_request("eth_getBalance", [address, block_id]):
+            return int(result, 16) if isinstance(result, str) else result
 
-        result = self.make_request("eth_getBalance", [address, block_id])
-        if not result:
-            raise FoundryProviderError(f"Failed to get balance for account '{address}'.")
-
-        return int(result, 16) if isinstance(result, str) else result
+        raise FoundryProviderError(f"Failed to get balance for account '{address}'.")
 
     def get_transaction_trace(self, transaction_hash: str, **kwargs) -> TraceAPI:
         if "debug_trace_transaction_parameters" not in kwargs:

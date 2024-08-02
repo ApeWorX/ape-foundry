@@ -52,9 +52,9 @@ from ape_foundry.exceptions import (
 )
 
 try:
-    from ape_optimism import Optimism
+    from ape_optimism import Optimism  # type: ignore
 except ImportError:
-    Optimism = None
+    Optimism = None  # type: ignore
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999

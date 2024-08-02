@@ -45,8 +45,16 @@ from web3.types import TxParams
 from yarl import URL
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
+from ape_foundry.exceptions import (
+    FoundryNotInstalledError,
+    FoundryProviderError,
+    FoundrySubprocessError,
+)
 
-from .exceptions import FoundryNotInstalledError, FoundryProviderError, FoundrySubprocessError
+try:
+    from ape_optimism import Optimism
+except ImportError:
+    Optimism = None
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
@@ -102,6 +110,13 @@ class FoundryNetworkConfig(PluginConfig):
     """
     Set a block time to allow mining to happen on an interval
     rather than only when a new transaction is submitted.
+    """
+
+    use_optimism: Optional[bool] = None
+    """
+    Configure the node to run with the `--optimism` flag.
+    NOTE: When using Optimism-based networks (including Base),
+    this flag is automatically added.
     """
 
     model_config = SettingsConfigDict(extra="allow")
@@ -457,7 +472,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if evm_version := self.evm_version:
             cmd.extend(("--hardfork", evm_version))
 
-        if self.network.ecosystem.name in ("optimism", "base"):
+        # Optimism-based networks are different; Anvil provides a flag to make
+        # testing more like the real network(s).
+        if self.settings.use_optimism or (
+            Optimism is not None
+            and isinstance(
+                self.network.ecosystem, Optimism and self.settings.use_optimism is not False
+            )
+        ):
             cmd.append("--optimism")
 
         return cmd

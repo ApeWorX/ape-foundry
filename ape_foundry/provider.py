@@ -178,6 +178,14 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             return self.uri
 
     @property
+    def use_optimism(self) -> bool:
+        return self.settings.use_optimism or (
+            self.settings.use_optimism is not False
+            and Optimism is not None
+            and isinstance(self.network.ecosystem, Optimism)
+        )
+
+    @property
     def _port(self) -> Optional[int]:
         return URL(self.uri).port
 
@@ -474,12 +482,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         # Optimism-based networks are different; Anvil provides a flag to make
         # testing more like the real network(s).
-        if self.settings.use_optimism or (
-            Optimism is not None
-            and isinstance(
-                self.network.ecosystem, Optimism and self.settings.use_optimism is not False
-            )
-        ):
+        if self.use_optimism:
             cmd.append("--optimism")
 
         return cmd

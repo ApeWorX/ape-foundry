@@ -483,3 +483,12 @@ def test_evm_version(project, local_network, host):
         cmd = provider.build_command()
         assert "--hardfork" in cmd
         assert "shanghai" in cmd
+
+
+def test_optimism(networks):
+    with networks.optimism.local.use_provider(
+        "foundry", provider_settings={"port": 9545}
+    ) as provider:
+        assert provider.is_connected
+        cmd = provider.build_command()
+        assert "--optimism" in cmd

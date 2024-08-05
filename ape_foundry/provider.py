@@ -670,16 +670,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             ],
         )
 
-    def _eth_call(self, arguments: list, raise_on_revert: bool = True) -> HexBytes:
-        # Overridden to handle unique Foundry pickiness.
-        txn_dict = copy(arguments[0])
-        if isinstance(txn_dict.get("type"), int):
-            txn_dict["type"] = HexBytes(txn_dict["type"]).hex()
-
-        txn_dict.pop("chainId", None)
-        arguments[0] = txn_dict
-        return super()._eth_call(arguments, raise_on_revert=raise_on_revert)
-
 
 class FoundryForkProvider(FoundryProvider):
     """

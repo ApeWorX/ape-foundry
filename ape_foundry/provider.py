@@ -2,7 +2,6 @@ import os
 import random
 import shutil
 from bisect import bisect_right
-from copy import copy
 from subprocess import PIPE, call
 from typing import Literal, Optional, Union, cast
 
@@ -41,7 +40,6 @@ from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.middleware.validation import MAX_EXTRADATA_LENGTH
-from web3.types import TxParams
 from yarl import URL
 
 from ape_foundry.constants import EVM_VERSION_BY_NETWORK
@@ -489,14 +487,15 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)
-        is_key_word = is_str and " " in amount
-        _is_hex = is_str and not is_key_word and is_0x_prefixed(amount)
+        is_key_word = is_str and " " in amount  # type: ignore
+        _is_hex = is_str and not is_key_word and amount.startswith("0x")  # type: ignore
 
         if is_key_word:
             # This allows values such as "1000 ETH".
             amount = self.conversion_manager.convert(amount, int)
             is_str = False
 
+        amount_hex_str: str
         if is_str and not _is_hex:
             amount_hex_str = to_hex(int(amount))
         elif isinstance(amount, (int, bytes)):

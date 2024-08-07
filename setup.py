@@ -14,12 +14,12 @@ extras_require = {
         "ape-optimism",  # For Optimism integration tests
     ],
     "lint": [
-        "black>=24.4.2,<25",  # Auto-formatter and linter
-        "mypy>=1.11.0,<2",  # Static type analyzer
+        "black>=24.8.0,<25",  # Auto-formatter and linter
+        "mypy>=1.11.1,<2",  # Static type analyzer
         "types-setuptools",  # Needed for mypy type shed
         "types-requests",  # Needed for mypy type shed
         "types-PyYAML",  # Needed for mypy type shed
-        "flake8>=7.1.0,<8",  # Style linter
+        "flake8>=7.1.1,<8",  # Style linter
         "flake8-breakpoint>=1.1.0,<2",  # Detect breakpoints left in code
         "flake8-print>=5.0.0,<6",  # Detect print statements left in code
         "flake8-pydantic",  # For detecting issues with Pydantic models

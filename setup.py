@@ -82,7 +82,7 @@ setup(
         "yarl",  # Use same version as ape
         "hexbytes",  # Use same version as ape
     ],
-    python_requires=">=3.8,<4",
+    python_requires=">=3.9,<4",
     extras_require=extras_require,
     py_modules=["ape_foundry"],
     license="Apache-2.0",

@@ -14,12 +14,12 @@ extras_require = {
         "ape-optimism",  # For Optimism integration tests
     ],
     "lint": [
-        "black>=24.4.2,<25",  # Auto-formatter and linter
-        "mypy>=1.11.0,<2",  # Static type analyzer
+        "black>=24.8.0,<25",  # Auto-formatter and linter
+        "mypy>=1.11.1,<2",  # Static type analyzer
         "types-setuptools",  # Needed for mypy type shed
         "types-requests",  # Needed for mypy type shed
         "types-PyYAML",  # Needed for mypy type shed
-        "flake8>=7.1.0,<8",  # Style linter
+        "flake8>=7.1.1,<8",  # Style linter
         "flake8-breakpoint>=1.1.0,<2",  # Detect breakpoints left in code
         "flake8-print>=5.0.0,<6",  # Detect print statements left in code
         "flake8-pydantic",  # For detecting issues with Pydantic models
@@ -74,7 +74,7 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.8.10,<0.9",
+        "eth-ape>=0.8.11,<0.9",
         "ethpm-types",  # Use same version as eth-ape
         "eth-pydantic-types",  # Use same version as eth-ape
         "evm-trace",  # Use same version as ape
@@ -82,7 +82,7 @@ setup(
         "yarl",  # Use same version as ape
         "hexbytes",  # Use same version as ape
     ],
-    python_requires=">=3.8,<4",
+    python_requires=">=3.9,<4",
     extras_require=extras_require,
     py_modules=["ape_foundry"],
     license="Apache-2.0",

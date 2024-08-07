@@ -579,12 +579,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 # Unlikely scenario where a transaction is on the error even though a receipt
                 # exists.
                 if isinstance(enriched.txn, TransactionAPI) and enriched.txn.receipt:
-                    try:
-                        enriched.txn.receipt.show_trace()
-                    except Exception:
-                        # TODO: Fix this in Ape
-                        pass
-
+                    enriched.txn.receipt.show_trace()
                 elif isinstance(enriched.txn, ReceiptAPI):
                     enriched.txn.show_trace()
 
@@ -643,12 +638,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             except Exception:
                 pass
 
-        try:
-            if trace is not None and (revert_msg := trace.revert_message):
-                return revert_msg
-        except Exception:
-            # TODO: Fix this in core
-            return ""
+        if trace is not None and (revert_msg := trace.revert_message):
+            return revert_msg
 
         return ""
 

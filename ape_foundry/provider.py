@@ -586,8 +586,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         if message.startswith("execution reverted: "):
             message = (
-                    message.replace("execution reverted: ", "").strip()
-                    or TransactionError.DEFAULT_MESSAGE
+                message.replace("execution reverted: ", "").strip()
+                or TransactionError.DEFAULT_MESSAGE
             )
             return self._handle_execution_reverted(exception, revert_message=message, **kwargs)
 
@@ -598,7 +598,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return VirtualMachineError(message, **kwargs)
 
-    def _handle_execution_reverted(
+    # The type ignore is because are using **kwargs rather than repeating.
+    def _handle_execution_reverted(  # type: ignore[override]
         self, exception: Exception, revert_message: Optional[str] = None, **kwargs
     ):
         # Assign default message if revert_message is invalid
@@ -613,7 +614,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         # Show call trace if available
         txn = enriched.txn
-        if txn and hasattr(txn, 'show_trace'):
+        if txn and hasattr(txn, "show_trace"):
             if isinstance(txn, TransactionAPI) and txn.receipt:
                 txn.receipt.show_trace()
             elif isinstance(txn, ReceiptAPI):

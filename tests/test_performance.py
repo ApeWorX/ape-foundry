@@ -1,9 +1,7 @@
 from ape.api import ReceiptAPI
 
 
-def test_contract_transaction_revert(
-        benchmark, connected_provider, owner, contract_instance
-):
+def test_contract_transaction_revert(benchmark, connected_provider, owner, contract_instance):
     tx = benchmark.pedantic(
         lambda *args, **kwargs: contract_instance.setNumber(*args, **kwargs),
         args=(5,),

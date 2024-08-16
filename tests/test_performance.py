@@ -2,7 +2,7 @@ from ape.api import ReceiptAPI
 
 
 def test_contract_transaction_revert(
-    benchmark, connected_provider, owner, contract_instance
+        benchmark, connected_provider, owner, contract_instance
 ):
     tx = benchmark.pedantic(
         lambda *args, **kwargs: contract_instance.setNumber(*args, **kwargs),
@@ -14,8 +14,7 @@ def test_contract_transaction_revert(
     assert isinstance(tx, ReceiptAPI)  # Sanity check.
     stats = benchmark.stats
     median = stats.get("median")
-    breakpoint()
 
-    # Was seeing
+    # Was seeing 0.44419266798649915.
     # Seeing 0.2634877339878585 as of https://github.com/ApeWorX/ape-foundry/pull/115
-    assert median < 4
+    assert median < 3.5

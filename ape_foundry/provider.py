@@ -546,82 +546,81 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return _get_transaction_trace(transaction_hash, **kwargs)
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
-        if not len(exception.args):
+        if not exception.args:
             return VirtualMachineError(base_err=exception, **kwargs)
 
         err_data = exception.args[0]
 
+        # Determine message based on the type of error data
         if isinstance(err_data, dict):
             message = str(err_data.get("message", f"{err_data}"))
-        elif isinstance(err_data, str):
-            message = err_data
-        elif msg := getattr(exception, "message", ""):
-            message = msg
         else:
-            message = ""
+            message = err_data if isinstance(err_data, str) else getattr(exception, "message", "")
 
         if not message:
             return VirtualMachineError(base_err=exception, **kwargs)
 
-        def _handle_execution_reverted(
-            exception: Exception, revert_message: Optional[str] = None, **kwargs
-        ):
-            if revert_message in ("", "0x", None):
-                revert_message = TransactionError.DEFAULT_MESSAGE
-
-            sub_err = ContractLogicError(
-                base_err=exception, revert_message=revert_message, **kwargs
-            )
-            enriched = self.compiler_manager.enrich_error(sub_err)
-
-            # Show call trace if available
-            if enriched.txn:
-                # Unlikely scenario where a transaction is on the error even though a receipt
-                # exists.
-                if isinstance(enriched.txn, TransactionAPI) and enriched.txn.receipt:
-                    enriched.txn.receipt.show_trace()
-                elif isinstance(enriched.txn, ReceiptAPI):
-                    enriched.txn.show_trace()
-
-            return enriched
-
-        # Handle `ContactLogicError` similarly to other providers in `ape`.
-        # by stripping off the unnecessary prefix that foundry has on reverts.
+        # Handle specific cases based on message content
         foundry_prefix = (
             "Error: VM Exception while processing transaction: reverted with reason string "
         )
+
+        # Handle Foundry error prefix
         if message.startswith(foundry_prefix):
             message = message.replace(foundry_prefix, "").strip("'")
-            return _handle_execution_reverted(exception, message, **kwargs)
+            return self._handle_execution_reverted(exception, message, **kwargs)
 
-        elif "Transaction reverted without a reason string" in message:
-            return _handle_execution_reverted(exception, **kwargs)
+        # Handle various cases of transaction reverts
+        if "Transaction reverted without a reason string" in message:
+            return self._handle_execution_reverted(exception, **kwargs)
 
-        elif message.lower() == "execution reverted":
+        if message.lower() == "execution reverted":
             message = TransactionError.DEFAULT_MESSAGE
-            if isinstance(exception, Web3ContractLogicError) and (
-                msg := self._extract_custom_error(**kwargs)
-            ):
-                exception.message = msg
+            if isinstance(exception, Web3ContractLogicError):
+                if custom_msg := self._extract_custom_error(**kwargs):
+                    exception.message = custom_msg
+            return self._handle_execution_reverted(exception, revert_message=message, **kwargs)
 
-            return _handle_execution_reverted(exception, revert_message=message, **kwargs)
-
-        elif message == "Transaction ran out of gas" or "OutOfGas" in message:
+        if "Transaction ran out of gas" in message or "OutOfGas" in message:
             return OutOfGasError(base_err=exception, **kwargs)
 
-        elif message.startswith("execution reverted: "):
+        if message.startswith("execution reverted: "):
             message = (
                 message.replace("execution reverted: ", "").strip()
                 or TransactionError.DEFAULT_MESSAGE
             )
-            return _handle_execution_reverted(exception, revert_message=message, **kwargs)
+            return self._handle_execution_reverted(exception, revert_message=message, **kwargs)
 
-        elif isinstance(exception, ContractCustomError):
-            # Is raw hex (custom exception)
+        # Handle custom errors
+        if isinstance(exception, ContractCustomError):
             message = TransactionError.DEFAULT_MESSAGE if message in ("", None, "0x") else message
-            return _handle_execution_reverted(exception, revert_message=message, **kwargs)
+            return self._handle_execution_reverted(exception, revert_message=message, **kwargs)
 
         return VirtualMachineError(message, **kwargs)
+
+    # The type ignore is because are using **kwargs rather than repeating.
+    def _handle_execution_reverted(  # type: ignore[override]
+        self, exception: Exception, revert_message: Optional[str] = None, **kwargs
+    ):
+        # Assign default message if revert_message is invalid
+        if revert_message == "0x":
+            revert_message = TransactionError.DEFAULT_MESSAGE
+        else:
+            revert_message = revert_message or TransactionError.DEFAULT_MESSAGE
+
+        # Create and enrich the error
+        sub_err = ContractLogicError(base_err=exception, revert_message=revert_message, **kwargs)
+        enriched = self.compiler_manager.enrich_error(sub_err)
+
+        # Show call trace if available
+        txn = enriched.txn
+        if txn and hasattr(txn, "show_trace"):
+            if isinstance(txn, TransactionAPI) and txn.receipt:
+                txn.receipt.show_trace()
+            elif isinstance(txn, ReceiptAPI):
+                txn.show_trace()
+
+        return enriched
 
     # Abstracted for easier testing conditions.
     def _extract_custom_error(self, **kwargs) -> str:

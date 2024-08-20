@@ -8,6 +8,7 @@ extras_require = {
         "pytest-xdist",  # Multi-process runner
         "pytest-cov",  # Coverage analyzer plugin
         "pytest-mock",  # For creating mocks
+        "pytest-benchmark",  # For performance tests
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
         "ape-alchemy",  # For running fork tests
         "ape-polygon",  # For running polygon fork tests

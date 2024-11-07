@@ -4,25 +4,22 @@ implementation written in Node.js).
 """
 
 from ape import plugins
-from ape.api.networks import LOCAL_NETWORK_NAME
-from ape_ethereum.ecosystem import NETWORKS
-
-from .provider import (
-    FoundryForkProvider,
-    FoundryNetworkConfig,
-    FoundryProvider,
-    FoundryProviderError,
-    FoundrySubprocessError,
-)
 
 
 @plugins.register(plugins.Config)
 def config_class():
+    from .provider import FoundryNetworkConfig
+
     return FoundryNetworkConfig
 
 
 @plugins.register(plugins.ProviderPlugin)
 def providers():
+    from ape.api.networks import LOCAL_NETWORK_NAME
+    from ape_ethereum.ecosystem import NETWORKS
+
+    from .provider import FoundryForkProvider, FoundryProvider
+
     yield "ethereum", LOCAL_NETWORK_NAME, FoundryProvider
 
     for network in NETWORKS:
@@ -59,6 +56,12 @@ def providers():
     yield "blast", LOCAL_NETWORK_NAME, FoundryProvider
     yield "blast", "mainnet-fork", FoundryForkProvider
     yield "blast", "sepolia-fork", FoundryForkProvider
+
+
+def __getattr__(name: str):
+    import ape_foundry.provider as module
+
+    return getattr(module, name)
 
 
 __all__ = [

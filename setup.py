@@ -15,8 +15,8 @@ extras_require = {
         "ape-optimism",  # For Optimism integration tests
     ],
     "lint": [
-        "black>=24.8.0,<25",  # Auto-formatter and linter
-        "mypy>=1.11.1,<2",  # Static type analyzer
+        "black>=24.10.0,<25",  # Auto-formatter and linter
+        "mypy>=1.13.0,<2",  # Static type analyzer
         "types-setuptools",  # Needed for mypy type shed
         "types-requests",  # Needed for mypy type shed
         "types-PyYAML",  # Needed for mypy type shed
@@ -25,7 +25,7 @@ extras_require = {
         "flake8-print>=5.0.0,<6",  # Detect print statements left in code
         "flake8-pydantic",  # For detecting issues with Pydantic models
         "isort>=5.13.2,<6",  # Import sorting linter
-        "mdformat>=0.7.17",  # Auto-formatter for markdown
+        "mdformat>=0.7.18",  # Auto-formatter for markdown
         "mdformat-gfm>=0.3.5",  # Needed for formatting GitHub-flavored markdown
         "mdformat-frontmatter>=0.4.1",  # Needed for frontmatters-style headers in issue templates
         "mdformat-pyproject>=0.0.1",  # Allows configuring in pyproject.toml

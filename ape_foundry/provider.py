@@ -3,7 +3,7 @@ import random
 import shutil
 from bisect import bisect_right
 from subprocess import PIPE, call
-from typing import Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Union, cast
 
 from ape.api import (
     BlockAPI,
@@ -23,7 +23,6 @@ from ape.exceptions import (
     VirtualMachineError,
 )
 from ape.logging import logger
-from ape.types import AddressType, BlockID, ContractCode, SnapshotID
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
 from ape_ethereum.trace import TraceApproach, TransactionTrace
@@ -53,6 +52,10 @@ try:
     from ape_optimism import Optimism  # type: ignore
 except ImportError:
     Optimism = None  # type: ignore
+
+if TYPE_CHECKING:
+    from ape.types import AddressType, BlockID, ContractCode, SnapshotID
+
 
 EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
@@ -136,7 +139,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     _did_warn_wrong_node = False
 
     @property
-    def unlocked_accounts(self) -> list[AddressType]:
+    def unlocked_accounts(self) -> list["AddressType"]:
         return list(self.account_manager.test_accounts._impersonated_accounts)
 
     @property
@@ -485,7 +488,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return cmd
 
-    def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
+    def set_balance(self, account: "AddressType", amount: Union[int, float, str, bytes]):
         is_str = isinstance(amount, str)
         is_key_word = is_str and " " in amount  # type: ignore
         _is_hex = is_str and not is_key_word and amount.startswith("0x")  # type: ignore
@@ -516,19 +519,19 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def snapshot(self) -> str:
         return self.make_request("evm_snapshot", [])
 
-    def restore(self, snapshot_id: SnapshotID) -> bool:
+    def restore(self, snapshot_id: "SnapshotID") -> bool:
         snapshot_id = to_hex(snapshot_id) if isinstance(snapshot_id, int) else snapshot_id
         result = self.make_request("evm_revert", [snapshot_id])
         return result is True
 
-    def unlock_account(self, address: AddressType) -> bool:
+    def unlock_account(self, address: "AddressType") -> bool:
         self.make_request("anvil_impersonateAccount", [address])
         return True
 
-    def relock_account(self, address: AddressType):
+    def relock_account(self, address: "AddressType"):
         self.make_request("anvil_stopImpersonatingAccount", [address])
 
-    def get_balance(self, address: AddressType, block_id: Optional[BlockID] = None) -> int:
+    def get_balance(self, address: "AddressType", block_id: Optional["BlockID"] = None) -> int:
         if result := self.make_request("eth_getBalance", [address, block_id]):
             return int(result, 16) if isinstance(result, str) else result
 
@@ -645,7 +648,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self.make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
 
-    def set_code(self, address: AddressType, code: ContractCode) -> bool:
+    def set_code(self, address: "AddressType", code: "ContractCode") -> bool:
         if isinstance(code, bytes):
             code = code.hex()
 
@@ -658,7 +661,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.make_request("anvil_setCode", [address, code])
         return True
 
-    def set_storage(self, address: AddressType, slot: int, value: HexBytes):
+    def set_storage(self, address: "AddressType", slot: int, value: HexBytes):
         self.make_request(
             "anvil_setStorageAt",
             [
@@ -712,7 +715,7 @@ class FoundryForkProvider(FoundryProvider):
 
         return self.settings.evm_version
 
-    def get_block(self, block_id: BlockID) -> BlockAPI:
+    def get_block(self, block_id: "BlockID") -> BlockAPI:
         if isinstance(block_id, str) and block_id.isnumeric():
             block_id = int(block_id)
 

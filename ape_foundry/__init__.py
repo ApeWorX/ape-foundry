@@ -59,12 +59,37 @@ def providers():
 
 
 def __getattr__(name: str):
-    import ape_foundry.provider as module
+    if name == "FoundryForkProvider":
+        from ape_foundry.provider import FoundryForkProvider
 
-    return getattr(module, name)
+        return FoundryForkProvider
+
+    elif name == "FoundryNetworkConfig":
+        from ape_foundry.provider import FoundryNetworkConfig
+
+        return FoundryNetworkConfig
+
+    elif name == "FoundryProvider":
+        from ape_foundry.provider import FoundryProvider
+
+        return FoundryProvider
+
+    elif name == "FoundryProviderError":
+        from ape_foundry.provider import FoundryProviderError
+
+        return FoundryProviderError
+
+    elif name == "FoundrySubprocessError":
+        from ape_foundry.provider import FoundrySubprocessError
+
+        return FoundrySubprocessError
+
+    else:
+        raise AttributeError(name)
 
 
 __all__ = [
+    "FoundryForkProvider",
     "FoundryNetworkConfig",
     "FoundryProvider",
     "FoundryProviderError",

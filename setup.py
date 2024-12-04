@@ -31,9 +31,7 @@ extras_require = {
         "mdformat-pyproject>=0.0.1",  # Allows configuring in pyproject.toml
     ],
     "doc": [
-        "Sphinx>=6.1.3,<7",  # Documentation generator
-        "sphinx_rtd_theme>=1.2.0,<2",  # Readthedocs.org theme
-        "towncrier>=19.2.0, <20",  # Generate release notes
+        "sphinx-ape",
     ],
     "release": [  # `release` GitHub Action job uses this
         "setuptools",  # Installation tool

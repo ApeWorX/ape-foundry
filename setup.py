@@ -76,12 +76,12 @@ setup(
     include_package_data=True,
     install_requires=[
         "eth-ape>=0.8.12,<0.9",
-        "ethpm-types",  # Use same version as eth-ape
-        "eth-pydantic-types",  # Use same version as eth-ape
-        "evm-trace",  # Use same version as ape
-        "web3",  # Use same version as ape
-        "yarl",  # Use same version as ape
-        "hexbytes",  # Use same version as ape
+        "ethpm-types>=0.6.19,<0.7",
+        "eth_pydantic_types>=0.1.3,<0.2",
+        "evm-trace>=0.2.3,<0.3",
+        "web3>=6.20.3,<8",
+        "yarl>=1.9.2,<2",
+        "hexbytes>=0.3.1,<2",
     ],
     python_requires=">=3.9,<4",
     extras_require=extras_require,

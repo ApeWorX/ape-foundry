@@ -32,9 +32,7 @@ extras_require = {
         "mdformat-pyproject>=0.0.2",  # Allows configuring in pyproject.toml
     ],
     "doc": [
-        "Sphinx>=6.1.3,<7",  # Documentation generator
-        "sphinx_rtd_theme>=1.2.0,<2",  # Readthedocs.org theme
-        "towncrier>=19.2.0, <20",  # Generate release notes
+        "sphinx-ape",
     ],
     "release": [  # `release` GitHub Action job uses this
         "setuptools",  # Installation tool
@@ -76,13 +74,13 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.8.12,<0.9",
-        "ethpm-types",  # Use same version as eth-ape
-        "eth-pydantic-types",  # Use same version as eth-ape
-        "evm-trace",  # Use same version as ape
-        "web3",  # Use same version as ape
-        "yarl",  # Use same version as ape
-        "hexbytes",  # Use same version as ape
+        "eth-ape>=0.8.21,<0.9",
+        "ethpm-types>=0.6.19,<0.7",
+        "eth_pydantic_types>=0.1.3,<0.2",
+        "evm-trace>=0.2.3,<0.3",
+        "web3>=6.20.1,<8",
+        "yarl>=1.9.2,<2",
+        "hexbytes>=0.3.1,<2",
     ],
     python_requires=">=3.9,<4",
     extras_require=extras_require,

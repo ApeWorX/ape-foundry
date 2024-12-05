@@ -37,7 +37,11 @@ from web3.exceptions import ContractCustomError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
 from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
-from web3.middleware import geth_poa_middleware
+
+try:
+    from web3.middleware import ExtraDataToPOAMiddleware  # type: ignore
+except ImportError:
+    from web3.middleware import geth_poa_middleware as ExtraDataToPOAMiddleware  # type: ignore
 from web3.middleware.validation import MAX_EXTRADATA_LENGTH
 from yarl import URL
 
@@ -400,7 +404,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         # Handle if using PoA
         if any(map(check_poa, (0, "latest"))):
-            self._web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+            self._web3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
 
     def _start(self):
         if self.is_connected:
@@ -786,7 +790,9 @@ class FoundryForkProvider(FoundryProvider):
                     logger.error(
                         f"Upstream provider '{upstream_provider.name}' missing Geth PoA middleware."
                     )
-                    upstream_provider.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+                    upstream_provider.web3.middleware_onion.inject(
+                        ExtraDataToPOAMiddleware, layer=0
+                    )
                     upstream_genesis_block_hash = upstream_provider.get_block(0).hash
                 else:
                     raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err

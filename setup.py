@@ -77,7 +77,7 @@ setup(
         "ethpm-types>=0.6.19,<0.7",
         "eth_pydantic_types>=0.1.3,<0.2",
         "evm-trace>=0.2.3,<0.3",
-        "web3>=6.20.3,<8",
+        "web3>=6.20.1,<8",
         "yarl>=1.9.2,<2",
         "hexbytes>=0.3.1,<2",
     ],

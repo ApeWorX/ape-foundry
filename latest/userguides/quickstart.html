@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" data-accent-color="lime" data-content_root="../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Quick Start - ape-foundry documentation</title><link rel="shortcut icon" href="../_static/favicon.ico"/><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="prev" title="&lt;no title&gt;" href="../index.html" />
+      <link rel="canonical" href="ape-foundry/userguides/quickstart.html" /><script>
+    function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
+    setColorMode(localStorage._theme||"auto");
+  </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=397bb51e" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=83eaa723" />
+    <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sy-f-text: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+  --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
+}
+</style>
+    <meta property="og:type" content="website"/>
+<meta property="og:url" content="ape-foundry/userguides/quickstart.html"/>
+<meta property="og:title" content="Quick Start"/>
+<meta name="twitter:card" content="summary"/>
+  </head>
+<body><div class="sy-head">
+  <div class="sy-head-blur"></div>
+  <div class="sy-head-inner sy-container mx-auto">
+    <a class="sy-head-brand" href="../index.html">
+      <img class="light-logo" src="../_static/logo_grey.svg" alt="ape-foundry" height="28" loading="lazy" />
+      <img class="dark-logo" src="../_static/logo_green.svg" alt="ape-foundry" height="28" loading="lazy" />
+      <strong>ape-foundry</strong>
+    </a>
+    <div class="sy-head-nav" id="HeadNav">
+      <nav class="sy-head-links"></nav>
+      <div class="sy-head-extra flex items-center print:hidden"><form class="searchbox flex items-center" action="../search.html" method="get">
+  <input type="text" name="q" placeholder="Search" />
+  <kbd>/</kbd>
+</form><div class="sy-head-socials"></div></div>
+    </div>
+    <div class="sy-head-actions flex items-center shrink-0 print:hidden"><button class="js-theme theme-switch flex items-center"
+data-aria-auto="Switch to light color mode"
+data-aria-light="Switch to dark color mode"
+data-aria-dark="Switch to auto color mode">
+<i class="i-lucide theme-icon"></i>
+</button><button class="md:hidden flex items-center js-menu" aria-label="Menu" type="button" aria-controls="HeadNav" aria-expanded="false">
+        <div class="hamburger">
+          <span class="hamburger_1"></span>
+          <span class="hamburger_2 -translate-x-2"></span>
+          <span class="hamburger_3 -translate-x-1"></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="sy-page sy-container flex mx-auto">
+  <aside id="lside" class="sy-lside md:w-72 md:shrink-0 print:hidden">
+    <div class="sy-lside-inner md:sticky">
+      <div class="sy-scrollbar p-6">
+        <div class="globaltoc" data-expand-depth="0"><p class="caption" role="heading" aria-level="3"><span class="caption-text">User Guides</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a></li>
+</ul>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="lside-overlay js-menu" role="button" aria-label="Close left sidebar" aria-controls="lside" aria-expanded="false"></div>
+  <aside id="rside" class="sy-rside pb-3 w-64 shrink-0 order-last">
+    <button class="rside-close js-menu xl:hidden" aria-label="Close Table of Contents" type="button" aria-controls="rside" aria-expanded="false">
+      <i class="i-lucide close"></i>
+    </button>
+    <div class="sy-scrollbar sy-rside-inner px-6 xl:top-16 xl:sticky xl:pl-0 pt-6 pb-4"><div class="localtoc"><h3>On this page</h3><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#installation">Installation</a><ul>
+<li><a class="reference internal" href="#via-pip">via <code class="docutils literal notranslate"><span class="pre">pip</span></code></a></li>
+<li><a class="reference internal" href="#via-setuptools">via <code class="docutils literal notranslate"><span class="pre">setuptools</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quick-usage">Quick Usage</a></li>
+<li><a class="reference internal" href="#mainnet-fork">Mainnet Fork</a></li>
+<li><a class="reference internal" href="#remote-anvil-node">Remote Anvil Node</a></li>
+<li><a class="reference internal" href="#impersonate-accounts">Impersonate Accounts</a></li>
+<li><a class="reference internal" href="#base-fee-and-priority-fee">Base Fee and Priority Fee</a></li>
+<li><a class="reference internal" href="#auto-mining">Auto-mining</a><ul>
+<li><a class="reference internal" href="#mine-on-an-interval">Mine on an interval</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#evm-version-hardfork">EVM Version (hardfork)</a></li>
+</ul>
+</div><div id="ethical-ad-placement" data-ea-publisher="readthedocs"></div></div>
+  </aside>
+  <div class="rside-overlay js-menu" role="button" aria-label="Close Table of Contents" aria-controls="rside" aria-expanded="false"></div>
+  <main class="sy-main w-full max-sm:max-w-full print:pt-6"><div class="sy-breadcrumbs" role="navigation">
+  <div class="sy-breadcrumbs-inner flex items-center">
+    <div class="md:hidden mr-3">
+      <button class="js-menu" aria-label="Menu" type="button" aria-controls="lside" aria-expanded="false">
+        <i class="i-lucide menu"></i>
+      </button>
+    </div>
+    <ol class="flex-1" itemscope itemtype="https://schema.org/BreadcrumbList"><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <a itemprop="item" href="../index.html"><span itemprop="name">ape-foundry</span></a>
+        <span>/</span>
+        <meta itemprop="position" content="1" />
+      </li><li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+        <strong itemprop="name">Quick Start</strong>
+        <meta itemprop="position" content="2" />
+      </li></ol>
+    <div class="xl:hidden ml-1">
+      <button class="js-menu" aria-label="Show table of contents" type="button" aria-controls="rside"
+        aria-expanded="false">
+        <i class="i-lucide outdent"></i>
+      </button>
+    </div>
+  </div>
+</div><div class="flex flex-col break-words justify-between">
+      <div class="min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
+        <article class="yue" role="main">
+          <section id="quick-start">
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h1>
+<p>Foundry network provider plugin for Ape.
+Foundry is a development framework written in Rust for Ethereum that includes a local network implementation.</p>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.python.org/downloads">python3</a> version 3.9 up to 3.12.</p></li>
+<li><p>Foundry. See Foundry’s <a class="reference external" href="https://github.com/foundry-rs/foundry#installation">Installation</a> documentation for steps.</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<section id="via-pip">
+<h3>via <code class="docutils literal notranslate"><span class="pre">pip</span></code><a class="headerlink" href="#via-pip" title="Link to this heading"></a></h3>
+<p>You can install the latest release via <a class="reference external" href="https://pypi.org/project/pip/"><code class="docutils literal notranslate"><span class="pre">pip</span></code></a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1">pip<span class="w"> </span>install<span class="w"> </span>ape-foundry
+</span></pre></div>
+</div>
+</section>
+<section id="via-setuptools">
+<h3>via <code class="docutils literal notranslate"><span class="pre">setuptools</span></code><a class="headerlink" href="#via-setuptools" title="Link to this heading"></a></h3>
+<p>You can clone the repository and use <a class="reference external" href="https://github.com/pypa/setuptools"><code class="docutils literal notranslate"><span class="pre">setuptools</span></code></a> for the most up-to-date version:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1">git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ApeWorX/ape-foundry.git
+</span><span data-line="2"><span class="nb">cd</span><span class="w"> </span>ape-foundry
+</span><span data-line="3">python3<span class="w"> </span>setup.py<span class="w"> </span>install
+</span></pre></div>
+</div>
+</section>
+</section>
+<section id="quick-usage">
+<h2>Quick Usage<a class="headerlink" href="#quick-usage" title="Link to this heading"></a></h2>
+<p>Use the <code class="docutils literal notranslate"><span class="pre">--network</span> <span class="pre">ethereum:local:foundry</span></code> command line flag to use the foundry network (if it’s not already configured as the default).</p>
+<p>This network provider takes additional Foundry-specific configuration options. To use them, add these configs in your project’s <code class="docutils literal notranslate"><span class="pre">ape-config.yaml</span></code>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://127.0.0.1:8555</span>
+</span></pre></div>
+</div>
+<p>To select a random port, use a value of “auto”:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+</span></pre></div>
+</div>
+<p>This is useful for multiprocessing and starting up multiple providers.</p>
+<p>You can also adjust the request timeout setting:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">request_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span><span class="w">  </span><span class="c1"># Defaults to 30</span>
+</span><span data-line="3"><span class="w">  </span><span class="nt">fork_request_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">600</span><span class="w">  </span><span class="c1"># Defaults to 300</span>
+</span></pre></div>
+</div>
+</section>
+<section id="mainnet-fork">
+<h2>Mainnet Fork<a class="headerlink" href="#mainnet-fork" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">ape-foundry</span></code> plugin also includes a mainnet fork provider.
+It requires using another provider that has access to mainnet.</p>
+<p>Use it in most commands like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1">ape<span class="w"> </span>console<span class="w"> </span>--network<span class="w"> </span>:mainnet-fork:foundry
+</span></pre></div>
+</div>
+<p>Specify the upstream archive-data provider in your <code class="docutils literal notranslate"><span class="pre">ape-config.yaml</span></code>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">fork</span><span class="p">:</span>
+</span><span data-line="3"><span class="w">    </span><span class="nt">ethereum</span><span class="p">:</span>
+</span><span data-line="4"><span class="w">      </span><span class="nt">mainnet</span><span class="p">:</span>
+</span><span data-line="5"><span class="w">        </span><span class="nt">upstream_provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alchemy</span>
+</span></pre></div>
+</div>
+<p>Otherwise, it defaults to the default mainnet provider plugin.
+You can also specify a <code class="docutils literal notranslate"><span class="pre">block_number</span></code> and <code class="docutils literal notranslate"><span class="pre">evm_version</span></code>.</p>
+<p>If the block number is specified, but no EVM version is specified, it is automatically set based on the block height for known networks.</p>
+<p><strong>NOTE</strong>: Make sure you have the upstream provider plugin installed for ape.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1">ape<span class="w"> </span>plugins<span class="w"> </span>install<span class="w"> </span>alchemy
+</span></pre></div>
+</div>
+</section>
+<section id="remote-anvil-node">
+<h2>Remote Anvil Node<a class="headerlink" href="#remote-anvil-node" title="Link to this heading"></a></h2>
+<p>To connect to a remote anvil node, set up your config like this:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://anvil.example.com</span>
+</span></pre></div>
+</div>
+<p>Now, instead of launching a local process, it will attempt to connect to the remote anvil node and use this plugin as the ape interface.</p>
+<p>To connect to a remote anvil node using an environment variable, set <code class="docutils literal notranslate"><span class="pre">APE_FOUNDRY_HOST</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nb">export</span><span class="w"> </span><span class="nv">APE_FOUNDRY_HOST</span><span class="o">=</span>https://your-anvil.example.com<span class="sb">`</span>
+</span></pre></div>
+</div>
+</section>
+<section id="impersonate-accounts">
+<h2>Impersonate Accounts<a class="headerlink" href="#impersonate-accounts" title="Link to this heading"></a></h2>
+<p>You can impersonate accounts using the <code class="docutils literal notranslate"><span class="pre">ape-foundry</span></code> plugin.
+To impersonate an account, do the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span> <span class="nn">pytest</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+</span><span data-line="4"><span class="k">def</span> <span class="nf">whale</span><span class="p">(</span><span class="n">accounts</span><span class="p">):</span>
+</span><span data-line="5">    <span class="k">return</span> <span class="n">accounts</span><span class="p">[</span><span class="s2">&quot;example.eth&quot;</span><span class="p">]</span>
+</span></pre></div>
+</div>
+<p>To transact, your impersonated account must have a balance.
+You can achieve this by using a forked network and impersonating an account with a balance.
+Alternatively, you can set your node’s base fee and priority fee to <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+<p>To programtically set an account’s balance, do the following:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">accounts</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="p">[</span><span class="s2">&quot;example.eth&quot;</span><span class="p">]</span>
+</span><span data-line="4"><span class="n">account</span><span class="o">.</span><span class="n">balance</span> <span class="o">=</span> <span class="s2">&quot;1000 ETH&quot;</span>  <span class="c1"># This calls `anvil_setBalance` under-the-hood.</span>
+</span></pre></div>
+</div>
+</section>
+<section id="base-fee-and-priority-fee">
+<h2>Base Fee and Priority Fee<a class="headerlink" href="#base-fee-and-priority-fee" title="Link to this heading"></a></h2>
+<p>Configure your node’s base fee and priority fee using the <code class="docutils literal notranslate"><span class="pre">ape-config.yaml</span></code> file.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">base_fee</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</span><span data-line="3"><span class="w">  </span><span class="nt">priority_fee</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</span></pre></div>
+</div>
+</section>
+<section id="auto-mining">
+<h2>Auto-mining<a class="headerlink" href="#auto-mining" title="Link to this heading"></a></h2>
+<p>Anvil nodes by default auto-mine.
+However, you can disable auto-mining on startup by configuring the foundry plugin like so:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">auto_mine</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span></pre></div>
+</div>
+<p>Else, you can disable auto-mining using the provider instance:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span> <span class="nn">ape</span> <span class="kn">import</span> <span class="n">chain</span>
+</span><span data-line="2">
+</span><span data-line="3"><span class="n">anvil</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">provider</span>
+</span><span data-line="4"><span class="n">anvil</span><span class="o">.</span><span class="n">auto_mine</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># calls `anvil_setAutomine` RPC.</span>
+</span></pre></div>
+</div>
+<section id="mine-on-an-interval">
+<h3>Mine on an interval<a class="headerlink" href="#mine-on-an-interval" title="Link to this heading"></a></h3>
+<p>By default, Anvil will mine a new block every time a transaction is submitted.
+To mine on an interval instead, set the <code class="docutils literal notranslate"><span class="pre">block_time</span></code> config:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">block_time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">  </span><span class="c1"># mine a new block every 10 seconds</span>
+</span></pre></div>
+</div>
+</section>
+</section>
+<section id="evm-version-hardfork">
+<h2>EVM Version (hardfork)<a class="headerlink" href="#evm-version-hardfork" title="Link to this heading"></a></h2>
+<p>To change the EVM version for local foundry networks, use the <code class="docutils literal notranslate"><span class="pre">evm_version</span></code> config:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">evm_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shanghai</span>
+</span></pre></div>
+</div>
+<p>To change the EVM version for forked networks, set it the specific forked-network config(s):</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
+</span><span data-line="2"><span class="w">  </span><span class="nt">fork</span><span class="p">:</span>
+</span><span data-line="3"><span class="w">    </span><span class="nt">ethereum</span><span class="p">:</span>
+</span><span data-line="4"><span class="w">      </span><span class="nt">mainnet</span><span class="p">:</span>
+</span><span data-line="5"><span class="w">        </span><span class="nt">evm_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shanghai</span>
+</span></pre></div>
+</div>
+</section>
+</section>
+
+        </article><button class="back-to-top" type="button">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+  </svg>
+  <span>Back to top</span>
+</button><div class="navigation flex print:hidden"><div class="navigation-prev">
+    <a href="../index.html">
+      <i class="i-lucide chevron-left"></i>
+      <div class="page-info">
+        <span>Previous</span><div class="title">Home</div></div>
+    </a>
+  </div></div></div>
+    </div>
+  </main>
+</div>
+<footer class="sy-foot">
+  <div class="sy-foot-inner sy-container mx-auto">
+    <div class="sy-foot-reserved md:flex justify-between items-center">
+      <div class="sy-foot-copyright"><p>2024, ApeWorX LTD</p>
+  
+  <p>
+    Made with
+    
+    <a href="https://www.sphinx-doc.org/">Sphinx</a> and
+    
+    <a href="https://shibuya.lepture.com">Shibuya theme</a>.
+  </p>
+</div>
+      <div class="sy-foot-socials"></div>
+    </div>
+  </div>
+</footer>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script data-domain="docs.apeworx.io" defer="defer" src="https://plausible.io/js/script.js"></script>
+      <script src="../_static/shibuya.js?v=e2e99575"></script></body>
+</html>

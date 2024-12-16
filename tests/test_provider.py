@@ -9,7 +9,7 @@ from ape.exceptions import ContractLogicError, TransactionError, VirtualMachineE
 from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HashBytes32
-from eth_utils import to_int
+from eth_utils import to_hex, to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
 
@@ -425,7 +425,7 @@ def test_send_transaction_when_no_error_and_receipt_fails(
         receipt_data = {
             "failed": True,
             "blockNumber": 0,
-            "txnHash": tx_hash.hex(),
+            "txnHash": to_hex(tx_hash),
             "status": TransactionStatusEnum.FAILING.value,
             "sender": owner.address,
             "receiver": vyper_contract_instance.address,

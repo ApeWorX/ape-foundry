@@ -25,7 +25,6 @@ from ape.exceptions import (
 from ape.logging import logger
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
-from ape_ethereum.trace import TraceApproach, TransactionTrace
 from ape_test import ApeTestConfig
 from eth_pydantic_types import HashBytes32, HexBytes
 from eth_typing import HexStr
@@ -51,6 +50,7 @@ from ape_foundry.exceptions import (
     FoundryProviderError,
     FoundrySubprocessError,
 )
+from ape_foundry.trace import AnvilTransactionTrace
 
 try:
     from ape_optimism import Optimism  # type: ignore
@@ -542,14 +542,6 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         raise FoundryProviderError(f"Failed to get balance for account '{address}'.")
 
     def get_transaction_trace(self, transaction_hash: str, **kwargs) -> TraceAPI:
-        if "debug_trace_transaction_parameters" not in kwargs:
-            kwargs["debug_trace_transaction_parameters"] = {
-                "stepsTracing": True,
-                "enableMemory": True,
-            }
-        if "call_trace_approach" not in kwargs:
-            kwargs["call_trace_approach"] = TraceApproach.PARITY
-
         return _get_transaction_trace(transaction_hash, **kwargs)
 
     def get_virtual_machine_error(self, exception: Exception, **kwargs) -> VirtualMachineError:
@@ -835,4 +827,4 @@ class FoundryForkProvider(FoundryProvider):
 
 def _get_transaction_trace(transaction_hash: str, **kwargs) -> TraceAPI:
     # Abstracted for testing purposes.
-    return TransactionTrace(transaction_hash=transaction_hash, **kwargs)
+    return AnvilTransactionTrace(transaction_hash=transaction_hash, **kwargs)

@@ -113,8 +113,8 @@ def test_reset_fork_specify_block_number_via_config(mainnet_fork_provider):
     mainnet_fork_provider.reset_fork()
     block_num_after_reset = mainnet_fork_provider.get_block("latest").number
     block_base_fee_after_reset = mainnet_fork_provider.get_block("latest").base_fee
-    assert block_num_after_reset == 15776634  # Specified in ape-config.yaml
-    assert block_base_fee_after_reset == 28831496753
+    assert block_num_after_reset == 21418244  # Specified in ape-config.yaml
+    assert block_base_fee_after_reset == 12273900931
 
 
 @pytest.mark.fork

@@ -1,7 +1,7 @@
 LOCAL_TRACE = r"""
 Call trace for '0x([A-Fa-f0-9]{64})'
 tx\.origin=0x[a-fA-F0-9]{40}
-ContractA\.methodWithoutArguments\(\) -> 0x00\.\.93bc \[\d+ gas\]
+ContractA\.methodWithoutArguments\(\) -> 0x0000\.\.93bc \[\d+ gas\]
 ├── SYMBOL\.supercluster\(x=234444\) -> \[
 │       \[23523523235235, 11111111111, 234444\],
 │       \[
@@ -55,50 +55,55 @@ ContractA\.methodWithoutArguments\(\) -> 0x00\.\.93bc \[\d+ gas\]
     └── ContractC\.methodC1\(windows95="simpler", jamaica=111, cardinal=Contract[A|C]\) \[\d+ gas\]
 """
 MAINNET_FAIL_TRACE_FIRST_10_LINES = r"""
-Call trace for '0x053cba5c12172654d894f66d5670bab6215517a94189a9ffc09bc40a589ec04d'
-reverted with message: "UNIV3R: min return"
-tx\.origin=0xd2f91C13e2D7ABbA4408Cd3D86285b7835524ad7
-AggregationRouterV4\.uniswapV3Swap\(
-  amount=12851675475480000000000,
-  minReturn=4205588148,
-  pools=\[
-    682631518358379038160760928734868612545194078373,
-    5789604461865809771178549250512551984713807685540901737341300416798777562476
+Call trace for '0x605ebd5a54b7d99d9bb61a228a57bfdf8614148c063a5f44e5d52b5a81c2679c'
+reverted with message: "BAL#508"
+tx\.origin=0xF36BCB79C3AD71Bd4E9343f78c402b0f6C99bF34
+AggregationRouterV5\.swap\(
+  executor=AggregationRouterV5,
+  desc=\[
+    AggregationRouterV5,
+    AggregationRouterV5,
+    AggregationRouterV5,
+    tx\.origin,
+
 """
 MAINNET_FAIL_TRACE_LAST_10_LINES = r"""
-    ├── AggregationRouterV4\.uniswapV3SwapCallback\(
-    │     amount0Delta=-4192051335,
-    │     amount1Delta=2098831888913057968,
-    │     0x00\.\.097d
-    │   \) \[9861 gas\]
-    │   ├── UniswapV3Pool.token0\(\) -> FiatTokenProxy \[266 gas\]
-    │   ├── UniswapV3Pool\.token1\(\) -> WETH \[308 gas\]
-    │   ├── UniswapV3Pool\.fee\(\) -> 500 \[251 gas\]
-    │   └── WETH\.transfer\(dst=UniswapV3Pool, wad=2098831888913057968\) -> True \[6062 gas\]
-    └── WETH\.balanceOf\(UniswapV3Pool\) -> 68359883632315875514968 \[534 gas\]
+            48534500000000000000,
+            0x0000\.\.0000
+          ],
+          funds=\['Vault', 0, 'Vault', 0\],
+          limit=0,
+          deadline=1734390153
+        \) ->
+        0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000
+        000000000000000000000000000000000000000000000742414c2335303800000000000000000000000000000000
+        000000000000000000 48534500000000000000 \[7542 gas\]
+
 """
 MAINNET_TRACE_FIRST_10_LINES = r"""
 Call trace for '0xb7d7f1d5ce7743e821d3026647df486f517946ef1342a1ae93c96e4a8016eab7'
 tx\.origin=0x5668EAd1eDB8E2a4d724C8fb9cB5fFEabEB422dc
-DSProxy\.execute\(_target=LoanShifterTaker, _data=0x35\.\.0000\) -> "" \[\d+ gas\]
-└── \(delegate\) LoanShifterTaker\.moveLoan\(
-      _exchangeData=\[
-        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE,
-        ZERO_ADDRESS,
-        0,
-        0,
+
+Events emitted:
+log LogPermit\(src=0x0000\.\.09ad, dst=0x0000..52dd, sig=0x1cff\.\.0000\)
+log Transfer\(
+  from=CErc20Delegator,
+  to=CErc20Delegator,
+  amount=48354786024690521017562
+\)\[x2\]
 """
 MAINNET_TRACE_LAST_10_LINES = r"""
-    │                   └── LendingRateOracle\.getMarketBorrowRate\(_asset=DAI\) ->
     │                       35000000000000000000000000 \[1164 gas\]
-    ├── DSProxy\.authority\(\) -> DSGuard \[1291 gas\]
-    ├── DSGuard\.forbid\(src=LoanShifterReceiver, dst=DSProxy, sig=0x1c\.\.0000\) \[5253 gas\]
+    ├── CErc20Delegator\.0xbf7e214f\(\) ->
+    │   0x000000000000000000000000b67f15159e1c60d7e5f5b60316c4588b014c61fa \[1291 gas\]
+    ├── DSGuard\.forbid\(src=DSGuard, dst=DSGuard, sig=0x1cff\.\.0000\) \[5253 gas\]
     └── DefisaverLogger\.Log\(
-          _contract=DSProxy,
+          _contract=DefisaverLogger,
           _caller=tx\.origin,
           _logName="LoanShifter",
-          _data=0x00\.\.0000
+          _data=0x0000\.\.0000
         \) \[6057 gas\]
+
 """
 LOCAL_GAS_REPORT = r"""
  +ContractA Gas

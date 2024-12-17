@@ -1,11 +1,11 @@
 import re
 import shutil
 from pathlib import Path
-from typing import List
 
 import pytest
 from ape.exceptions import ContractLogicError
 from ape.utils import create_tempdir
+from eth_utils import to_hex
 from hexbytes import HexBytes
 
 from .expected_traces import (
@@ -17,7 +17,7 @@ from .expected_traces import (
     MAINNET_TRACE_LAST_10_LINES,
 )
 
-MAINNET_FAIL_TXN_HASH = "0x053cba5c12172654d894f66d5670bab6215517a94189a9ffc09bc40a589ec04d"
+MAINNET_FAIL_TXN_HASH = "0x605ebd5a54b7d99d9bb61a228a57bfdf8614148c063a5f44e5d52b5a81c2679c"
 MAINNET_TXN_HASH = "0xb7d7f1d5ce7743e821d3026647df486f517946ef1342a1ae93c96e4a8016eab7"
 EXPECTED_MAP = {
     MAINNET_TXN_HASH: (MAINNET_TRACE_FIRST_10_LINES, MAINNET_TRACE_LAST_10_LINES),
@@ -45,7 +45,8 @@ def captrace(capsys):
 @pytest.fixture(autouse=True, scope="module")
 def full_contracts_cache(config):
     destination = config.DATA_FOLDER / "ethereum"
-    shutil.copytree(BASE_CONTRACTS_PATH, destination)
+    assert BASE_CONTRACTS_PATH.is_dir()
+    shutil.copytree(BASE_CONTRACTS_PATH, destination, dirs_exist_ok=True)
 
 
 @pytest.fixture(
@@ -116,7 +117,7 @@ def test_mainnet_transaction_traces(mainnet_receipt, captrace):
         assert_rich_output(actual_ending, expected_ending)
 
 
-def assert_rich_output(rich_capture: List[str], expected: str):
+def assert_rich_output(rich_capture: list[str], expected: str):
     expected_lines = [x.rstrip() for x in expected.splitlines() if x.rstrip()]
     actual_lines = [x.rstrip() for x in rich_capture if x.rstrip()]
     assert actual_lines, "No output."
@@ -178,4 +179,4 @@ def test_extract_custom_error_transaction_given_trace_fails(connected_provider, 
     assert actual == ""
 
     # Show failure was tracked
-    assert tracker[0] == HexBytes(tx.txn_hash).hex()
+    assert tracker[0] == to_hex(HexBytes(tx.txn_hash))

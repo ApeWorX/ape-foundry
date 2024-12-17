@@ -24,7 +24,7 @@ foundry:
     ethereum:
       mainnet:
         upstream_provider: alchemy
-        block_number: 15776634
+        block_number: 21418244
       sepolia:
         upstream_provider: alchemy
         block_number: 3091950

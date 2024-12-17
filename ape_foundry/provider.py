@@ -639,7 +639,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         elif "txn" in kwargs:
             txn = kwargs["txn"]
             try:
-                txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else txn.txn_hash.hex()
+                txn_hash = txn.txn_hash if isinstance(txn.txn_hash, str) else to_hex(txn.txn_hash)
                 trace = self.get_transaction_trace(txn_hash)
             except Exception:
                 pass
@@ -654,7 +654,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     def set_code(self, address: "AddressType", code: "ContractCode") -> bool:
         if isinstance(code, bytes):
-            code = code.hex()
+            code = to_hex(code)
 
         elif isinstance(code, str) and not is_0x_prefixed(code):
             code = add_0x_prefix(HexStr(code))
@@ -670,8 +670,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "anvil_setStorageAt",
             [
                 address,
-                HashBytes32.__eth_pydantic_validate__(slot).hex(),
-                HashBytes32.__eth_pydantic_validate__(value).hex(),
+                to_hex(HashBytes32.__eth_pydantic_validate__(slot)),
+                to_hex(HashBytes32.__eth_pydantic_validate__(value)),
             ],
         )
 

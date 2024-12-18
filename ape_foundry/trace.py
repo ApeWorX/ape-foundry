@@ -1,12 +1,9 @@
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any
 
 from ape.exceptions import ContractNotFoundError
 from ape_ethereum.trace import TraceApproach, TransactionTrace
 from hexbytes import HexBytes
-
-if TYPE_CHECKING:
-    from ethpm_types.contract_type import MethodABI
 
 
 class AnvilTransactionTrace(TransactionTrace):
@@ -41,4 +38,3 @@ class AnvilTransactionTrace(TransactionTrace):
             return self._ecosystem.decode_returndata(abi, HexBytes(output))
 
         return (None,)
-

@@ -27,14 +27,15 @@ class AnvilTransactionTrace(TransactionTrace):
             return (None,)
 
         try:
-            address = data[0]["action"]["to"]
-            calldata = data[0]["action"]["input"]
+            top_level_call = data[0]
+            address = top_level_call["action"]["to"]
+            calldata = top_level_call["action"]["input"]
             contract_type = self.chain_manager.contracts[address]
             abi = contract_type.methods[calldata[:10]]
         except (KeyError, ContractNotFoundError):
             abi = self.root_method_abi
 
-        if output := data[-1].get("result", {}).get("output"):
+        if output := top_level_call.get("result", {}).get("output"):
             return self._ecosystem.decode_returndata(abi, HexBytes(output))
 
         return (None,)

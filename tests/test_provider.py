@@ -238,8 +238,17 @@ def test_set_storage(connected_provider, contract_container, owner):
 
 
 def test_return_value(connected_provider, contract_instance, owner):
-    receipt = contract_instance.setAddress(owner.address, sender=owner)
-    assert receipt.return_value == 123
+    tx = contract_instance.setAddress(owner, sender=owner)
+    actual = tx.return_value
+    expected = 123
+    assert actual == expected
+
+
+def test_return_value_tx_with_subcalls(connected_provider, contract_a, owner):
+    tx = contract_a.methodWithoutArguments(sender=owner)
+    actual = tx.return_value
+    expected = HexBytes('0x0000000000000000000000003c44cdddb6a900fa2b585dd299e03d12fa4293bc')
+    assert actual == expected
 
 
 def test_get_receipt(connected_provider, contract_instance, owner):

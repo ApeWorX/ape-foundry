@@ -26,8 +26,8 @@ class AnvilTransactionTrace(TransactionTrace):
         if not (data := self.provider.make_request("trace_transaction", [self.transaction_hash])):
             return (None,)
 
+        top_level_call = data[0]
         try:
-            top_level_call = data[0]
             address = top_level_call["action"]["to"]
             calldata = top_level_call["action"]["input"]
             contract_type = self.chain_manager.contracts[address]

@@ -23,10 +23,10 @@ class AnvilTransactionTrace(TransactionTrace):
 
         # perf: Avoid any model serializing/deserializing that happens at
         #   Ape's abstract layer at this point.
-        if not (data := self.provider.make_request("trace_transaction", [self.transaction_hash])):
+        trace_tx_iter = self.provider.stream_request("trace_transaction", [self.transaction_hash])
+        if not (top_level_call := next(trace_tx_iter, None)):
             return (None,)
 
-        top_level_call = data[0]
         try:
             address = top_level_call["action"]["to"]
             calldata = top_level_call["action"]["input"]

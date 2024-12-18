@@ -247,7 +247,7 @@ def test_return_value(connected_provider, contract_instance, owner):
 def test_return_value_tx_with_subcalls(connected_provider, contract_a, owner):
     tx = contract_a.methodWithoutArguments(sender=owner)
     actual = tx.return_value
-    expected = HexBytes('0x0000000000000000000000003c44cdddb6a900fa2b585dd299e03d12fa4293bc')
+    expected = HexBytes("0x0000000000000000000000003c44cdddb6a900fa2b585dd299e03d12fa4293bc")
     assert actual == expected
 
 

@@ -607,6 +607,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         else:
             revert_message = revert_message or TransactionError.DEFAULT_MESSAGE
 
+        if revert_message.startswith("revert: "):
+            revert_message = revert_message[8:]
+
         # Create and enrich the error
         sub_err = ContractLogicError(base_err=exception, revert_message=revert_message, **kwargs)
         enriched = self.compiler_manager.enrich_error(sub_err)

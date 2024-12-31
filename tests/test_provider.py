@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from ape import convert
+from ape import convert, reverts
 from ape.api import TraceAPI
 from ape.api.accounts import ImpersonatedAccount
 from ape.contracts import ContractContainer
@@ -191,6 +191,10 @@ def test_revert(sender, contract_instance):
     # 'sender' is not the owner so it will revert (with a message)
     with pytest.raises(ContractLogicError, match="!authorized"):
         contract_instance.setNumber(6, sender=sender)
+
+    # Show it also works with the reverts-context-manager.
+    with reverts("!authorized"):
+        contract_instance.setNumber(55, sender=sender)
 
 
 def test_contract_revert_no_message(owner, contract_instance):

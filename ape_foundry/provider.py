@@ -26,7 +26,7 @@ from ape.logging import logger
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
 from ape_test import ApeTestConfig
-from eth_pydantic_types import HashBytes32, HexBytes
+from eth_pydantic_types import HexBytes, HexBytes32
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from pydantic import field_validator, model_validator
@@ -41,6 +41,7 @@ try:
     from web3.middleware import ExtraDataToPOAMiddleware  # type: ignore
 except ImportError:
     from web3.middleware import geth_poa_middleware as ExtraDataToPOAMiddleware  # type: ignore
+
 from web3.middleware.validation import MAX_EXTRADATA_LENGTH
 from yarl import URL
 
@@ -665,8 +666,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "anvil_setStorageAt",
             [
                 address,
-                to_hex(HashBytes32.__eth_pydantic_validate__(slot)),
-                to_hex(HashBytes32.__eth_pydantic_validate__(value)),
+                to_hex(HexBytes32.__eth_pydantic_validate__(slot)),
+                to_hex(HexBytes32.__eth_pydantic_validate__(value)),
             ],
         )
 

@@ -8,7 +8,7 @@ from ape.contracts import ContractContainer
 from ape.exceptions import ContractLogicError, TransactionError, VirtualMachineError
 from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
-from eth_pydantic_types import HashBytes32
+from eth_pydantic_types import HexBytes32
 from eth_utils import to_hex, to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
@@ -429,7 +429,7 @@ def test_send_transaction_when_no_error_and_receipt_fails(
 
     try:
         # NOTE: Value is meaningless.
-        tx_hash = HashBytes32.__eth_pydantic_validate__(123**36)
+        tx_hash = HexBytes32.__eth_pydantic_validate__(123**36)
 
         # Sending tx "works" meaning no vm error.
         mock_web3.eth.send_raw_transaction.return_value = tx_hash

@@ -778,11 +778,10 @@ class FoundryForkProvider(FoundryProvider):
     def connect(self):
         super().connect()
 
-        # If using the provider config for upstream_provider,
-        # set the network one in this session, so other features work in core.
         with self.forked_network.use_upstream_provider() as upstream_provider:
+            upstream_genesis_block = None
             try:
-                upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+                upstream_genesis_block = upstream_provider.get_block(0)
             except ExtraDataLengthError as err:
                 if isinstance(upstream_provider, Web3Provider):
                     logger.error(
@@ -791,15 +790,20 @@ class FoundryForkProvider(FoundryProvider):
                     upstream_provider.web3.middleware_onion.inject(
                         ExtraDataToPOAMiddleware, layer=0
                     )
-                    upstream_genesis_block_hash = upstream_provider.get_block(0).hash
+                    upstream_genesis_block = upstream_provider.get_block(0)
                 else:
                     raise FoundryProviderError(f"Unable to get genesis block: {err}.") from err
 
-        if self.get_block(0).hash != upstream_genesis_block_hash:
-            logger.warning(
-                "Upstream network has mismatching genesis block. "
-                "This could be an issue with foundry."
-            )
+            except Exception:
+                logger.error("Unable to get genesis block for upstream provider.")
+
+        if upstream_genesis_block is not None:
+            genesis_block = self.get_block(0)
+            if genesis_block.hash != upstream_genesis_block.hash:
+                logger.warning(
+                    "Upstream network has mismatching genesis block. "
+                    "This could be an issue with foundry."
+                )
 
     def build_command(self) -> list[str]:
         if not self.fork_url:

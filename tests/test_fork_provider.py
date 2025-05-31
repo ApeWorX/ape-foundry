@@ -7,7 +7,7 @@ from ape.exceptions import ContractLogicError
 from ape_ethereum.ecosystem import NETWORKS
 
 from ape_foundry import FoundryNetworkConfig
-from ape_foundry.provider import FoundryProvider, FoundryForkProvider
+from ape_foundry.provider import FoundryForkProvider
 
 TESTS_DIRECTORY = Path(__file__).parent
 TEST_ADDRESS = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"

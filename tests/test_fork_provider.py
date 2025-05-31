@@ -7,6 +7,7 @@ from ape.exceptions import ContractLogicError
 from ape_ethereum.ecosystem import NETWORKS
 
 from ape_foundry import FoundryNetworkConfig
+from ape_foundry.provider import FoundryProvider, FoundryForkProvider
 
 TESTS_DIRECTORY = Path(__file__).parent
 TEST_ADDRESS = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
@@ -181,6 +182,29 @@ def test_connect_to_polygon(networks, owner, contract_container):
     with networks.polygon.amoy_fork.use_provider("foundry"):
         contract = owner.deploy(contract_container)
         assert isinstance(contract, ContractInstance)  # Didn't fail
+
+
+@pytest.mark.fork
+def test_connect_light_client(mocker, networks, owner, contract_container):
+    """
+    Ensures if we can't detect mismatch, it is OK.
+    """
+    mock_network = mocker.MagicMock()
+    provider = FoundryForkProvider(name="foundry", network=networks.ethereum.local)
+    provider.network = mock_network
+    mock_web3 = mocker.MagicMock()
+    provider._web3 = mock_web3
+
+    # Set up a mock connection context for the upstream provider.
+    mock_ctx = mocker.MagicMock()
+    mock_upstream_provider = mocker.MagicMock()
+    mock_ctx.__enter__.return_value = mock_upstream_provider
+    mock_network.use_upstream_provider.return_value = mock_ctx
+
+    # Make it fail like a light client might.
+    mock_upstream_provider.get_block.side_effect = Exception
+
+    provider.connect()  # No error.
 
 
 @pytest.mark.fork

@@ -142,6 +142,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     attempted_ports: list[int] = []
     cached_chain_id: Optional[int] = None
     _did_warn_wrong_node = False
+    _disconnected: Optional[bool] = None
 
     @property
     def unlocked_accounts(self) -> list["AddressType"]:
@@ -259,7 +260,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def is_connected(self) -> bool:
-        if self._host in ("auto", None):
+        if self._disconnected is True or self._host in ("auto", None):
             # Hasn't tried yet.
             return False
 
@@ -300,7 +301,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         Start the foundry process and verify it's up and accepting connections.
         **NOTE**: Must set port before calling 'super().connect()'.
         """
-
+        self._disconnected = False
         if "APE_FOUNDRY_HOST" in os.environ:
             self._host = os.environ["APE_FOUNDRY_HOST"]
 
@@ -453,6 +454,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self._web3 = None
         self._host = None
         super().disconnect()
+        self._disconnected = True
 
     def build_command(self) -> list[str]:
         cmd = [

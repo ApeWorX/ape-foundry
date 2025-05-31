@@ -10,7 +10,7 @@ extras_require = {
         "pytest-mock",  # For creating mocks
         "pytest-benchmark",  # For performance tests
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-alchemy",  # For running fork tests
+        "ape-alchemy>=0.8.9",  # For running fork tests
         "ape-polygon",  # For running polygon fork tests
         "ape-optimism",  # For Optimism integration tests
     ],

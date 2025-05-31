@@ -142,7 +142,11 @@ def test_contract_revert_no_message(owner, mainnet_fork_contract_instance, mainn
 
 @pytest.mark.fork
 def test_transaction_contract_as_sender(
-    mainnet_fork_contract_instance, owner, contract_container, mainnet_fork_provider, convert
+    mainnet_fork_contract_instance,
+    owner,
+    contract_container,
+    mainnet_fork_provider,
+    convert,
 ):
     # Set balance so test wouldn't normally fail from lack of funds
     contract = owner.deploy(contract_container)

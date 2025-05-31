@@ -10,7 +10,7 @@ extras_require = {
         "pytest-mock",  # For creating mocks
         "pytest-benchmark",  # For performance tests
         "hypothesis>=6.2.0,<7.0",  # Strategy-based fuzzer
-        "ape-alchemy",  # For running fork tests
+        "ape-alchemy>=0.8.9",  # For running fork tests
         "ape-polygon",  # For running polygon fork tests
         "ape-optimism",  # For Optimism integration tests
     ],
@@ -74,13 +74,13 @@ setup(
     url="https://github.com/ApeWorX/ape-foundry",
     include_package_data=True,
     install_requires=[
-        "eth-ape>=0.8.21,<0.9",
-        "ethpm-types>=0.6.19,<0.7",
-        "eth_pydantic_types>=0.1.3,<0.2",
+        "eth-ape>=0.8.34,<0.9",
+        "eth_pydantic_types>=0.2.0,<0.3",
         "evm-trace>=0.2.3,<0.3",
+        "ethpm-types>=0.6.19,<0.7",
+        "hexbytes>=0.3.1,<2",
         "web3>=6.20.1,<8",
         "yarl>=1.9.2,<2",
-        "hexbytes>=0.3.1,<2",
     ],
     python_requires=">=3.9,<4",
     extras_require=extras_require,

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from ape.exceptions import ContractLogicError
 from ape.utils import create_tempdir
-from eth_utils import to_hex
+from faster_eth_utils import to_hex
 from hexbytes import HexBytes
 
 from .expected_traces import (

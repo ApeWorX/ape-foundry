@@ -28,7 +28,7 @@ from ape_ethereum.provider import Web3Provider
 from ape_test import ApeTestConfig
 from eth_pydantic_types import HexBytes, HexBytes32
 from eth_typing import HexStr
-from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
+from faster_eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from pydantic import field_validator, model_validator
 from pydantic_settings import SettingsConfigDict
 from web3 import HTTPProvider, Web3

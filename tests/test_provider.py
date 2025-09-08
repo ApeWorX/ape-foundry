@@ -9,8 +9,8 @@ from ape.exceptions import ContractLogicError, TransactionError, VirtualMachineE
 from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
 from eth_pydantic_types import HexBytes32
-from eth_utils import to_hex, to_int
 from evm_trace import CallType
+from faster_eth_utils import to_hex, to_int
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError

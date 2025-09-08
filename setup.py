@@ -78,6 +78,7 @@ setup(
         "eth_pydantic_types>=0.2.0,<0.3",
         "evm-trace>=0.2.3,<0.3",
         "ethpm-types>=0.6.19,<0.7",
+        "faster-eth-utils>=2.1.0,<6",
         "hexbytes>=0.3.1,<2",
         "web3>=6.20.1,<8",
         "yarl>=1.9.2,<2",

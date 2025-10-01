@@ -604,6 +604,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def _handle_execution_reverted(  # type: ignore[override]
         self, exception: Exception, revert_message: Optional[str] = None, **kwargs
     ):
+        trace = kwargs.get("trace")
+        txn = kwargs.get("txn")
+
         # Assign default message if revert_message is invalid
         if revert_message == "0x":
             revert_message = TransactionError.DEFAULT_MESSAGE
@@ -618,12 +621,22 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         enriched = self.compiler_manager.enrich_error(sub_err)
 
         # Show call trace if available
-        txn = enriched.txn
-        if txn and hasattr(txn, "show_trace"):
-            if isinstance(txn, TransactionAPI) and txn.receipt:
-                txn.receipt.show_trace()
+        if trace and callable(trace):
+            trace = trace()
+
+        if not trace and (txn := txn):
+            if isinstance(txn, TransactionAPI):
+                if txn.receipt:
+                    trace = txn.receipt.trace
+                else:
+                    # Calls it from the provider.
+                    trace = txn.trace
+
             elif isinstance(txn, ReceiptAPI):
-                txn.show_trace()
+                trace = txn.trace
+
+        if trace:
+            trace.show()
 
         return enriched
 

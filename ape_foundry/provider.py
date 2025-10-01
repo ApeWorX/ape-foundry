@@ -66,6 +66,9 @@ EPHEMERAL_PORTS_START = 49152
 EPHEMERAL_PORTS_END = 60999
 DEFAULT_PORT = 8545
 FOUNDRY_CHAIN_ID = 31337
+FOUNDRY_REVERT_PREFIX = (
+    "Error: VM Exception while processing transaction: reverted with reason string"
+)
 
 
 class FoundryForkConfig(PluginConfig):
@@ -354,7 +357,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                         self._start()
                         break
                     except FoundryNotInstalledError:
-                        # Is a sub-class of `FoundrySubprocessError` but we to still raise
+                        # Is a subclass of `FoundrySubprocessError` but we to still raise
                         # so we don't keep retrying.
                         raise
                     except SubprocessError as exc:
@@ -562,14 +565,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         if not message:
             return VirtualMachineError(base_err=exception, **kwargs)
 
-        # Handle specific cases based on message content
-        foundry_prefix = (
-            "Error: VM Exception while processing transaction: reverted with reason string "
-        )
-
         # Handle Foundry error prefix
-        if message.startswith(foundry_prefix):
-            message = message.replace(foundry_prefix, "").strip("'")
+        if message.startswith(FOUNDRY_REVERT_PREFIX):
+            message = message.replace(f"{FOUNDRY_REVERT_PREFIX} ", "").strip("'")
             return self._handle_execution_reverted(exception, message, **kwargs)
 
         # Handle various cases of transaction reverts

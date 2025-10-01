@@ -26,16 +26,17 @@ from ape.logging import logger
 from ape.utils import cached_property
 from ape_ethereum.provider import Web3Provider
 from ape_test import ApeTestConfig
-from eth_pydantic_types import HexBytes, HexBytes32
 from eth_typing import HexStr
 from eth_utils import add_0x_prefix, is_0x_prefixed, is_hex, to_hex
 from pydantic import field_validator, model_validator
 from pydantic_settings import SettingsConfigDict
 from web3 import HTTPProvider, Web3
-from web3.exceptions import ContractCustomError
+from web3.exceptions import ContractCustomError, ExtraDataLengthError
 from web3.exceptions import ContractLogicError as Web3ContractLogicError
-from web3.exceptions import ExtraDataLengthError
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
+
+from eth_pydantic_types import HexBytes, HexBytes32
+from eth_pydantic_types.utils import PadDirection
 
 try:
     from web3.middleware import ExtraDataToPOAMiddleware  # type: ignore
@@ -348,8 +349,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 else:
                     # The user configured a host and the anvil process was already running.
                     logger.info(
-                        f"Connecting to existing '{self.process_name}' "
-                        f"at host '{self._clean_uri}'."
+                        f"Connecting to existing '{self.process_name}' at host '{self._clean_uri}'."
                     )
             else:
                 for _ in range(self.settings.process_attempts):
@@ -628,7 +628,10 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     trace = txn.receipt.trace
                 else:
                     # Calls it from the provider.
-                    trace = txn.trace
+                    try:
+                        trace = txn.trace
+                    except Exception:
+                        pass
 
             elif isinstance(txn, ReceiptAPI):
                 trace = txn.trace
@@ -679,8 +682,8 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
             "anvil_setStorageAt",
             [
                 address,
-                to_hex(HexBytes32.__eth_pydantic_validate__(slot)),
-                to_hex(HexBytes32.__eth_pydantic_validate__(value)),
+                to_hex(HexBytes32.__eth_pydantic_validate__(slot, pad=PadDirection.LEFT)),
+                to_hex(HexBytes32.__eth_pydantic_validate__(value, pad=PadDirection.LEFT)),
             ],
         )
 

@@ -74,7 +74,7 @@ def test_local_transaction_traces(local_receipt, captrace):
             with open(file_path, "w") as file:
                 local_receipt.show_trace(file=file)
 
-            with open(file_path, "r") as file:
+            with open(file_path) as file:
                 lines = captrace.read_trace("Call trace for", file=file)
                 assert_rich_output(lines, LOCAL_TRACE)
 
@@ -91,7 +91,7 @@ def test_local_transaction_gas_report(local_receipt, captrace):
             with open(temp_file, "w") as file:
                 local_receipt.show_gas_report(file=file)
 
-            with open(temp_file, "r") as file:
+            with open(temp_file) as file:
                 lines = captrace.read_trace("ContractA Gas", file=file)
 
             assert_rich_output(lines, LOCAL_GAS_REPORT)
@@ -110,7 +110,7 @@ def test_mainnet_transaction_traces(mainnet_receipt, captrace):
         with open(temp_file, "w") as file:
             mainnet_receipt.show_trace(file=file)
 
-        with open(temp_file, "r") as file:
+        with open(temp_file) as file:
             lines = captrace.read_trace("Call trace for", file=file)
 
         expected_beginning, expected_ending = EXPECTED_MAP[mainnet_receipt.txn_hash]

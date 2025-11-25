@@ -49,7 +49,7 @@ def filter_expected_methods(*methods_to_remove: str) -> str:
 
 
 @pytest.fixture
-def ape_pytester(project, pytester):
+def ape_pytester(pytester):
     pytester.makeconftest(CONFTEST)
     pytester.makepyfile(TEST_FILE)
     return pytester
@@ -88,7 +88,7 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
 
 
 @pytest.mark.fork
-def test_gas_flag_in_tests(ape_pytester, sender):
+def test_gas_flag_in_tests(ape_pytester):
     result = ape_pytester.runpytest("--gas", "--network", "ethereum:local:foundry")
     run_gas_test(result)
 

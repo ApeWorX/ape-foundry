@@ -84,9 +84,14 @@ jobs:
             RUST_BACKTRACE: full
 
         - name: Run Fork Tests (Alchemy)
-          # Only run tests requiring Alchemy if not from a forked repo (Else it always fails)
+          # Only run tests requiring Alchemy if not from a forked repo
           if: github.event.pull_request.head.repo.full_name == github.repository
-          run: pytest -m fork
+          run: |
+            # First run: stepwise through tests until a failure
+            pytest -m fork --stepwise --maxfail=1
+        
+            # Second run: retry only tests that failed last time
+            pytest -m fork --last-failed --last-failed-no-failures
           env:
             RUST_BACKTRACE: full
             WEB3_ALCHEMY_PROJECT_ID: ${{ secrets.WEB3_ALCHEMY_PROJECT_ID }}

@@ -183,12 +183,12 @@ def test_get_receipt(mainnet_fork_provider, mainnet_fork_contract_instance, owne
 
 
 @pytest.mark.fork
-def test_connect_to_polygon(networks, owner, contract_container):
+def test_connect_to_polygon(networks, owner, vyper_contract_container):
     """
     Ensures we don't get PoA middleware issue.
     """
     with networks.polygon.amoy_fork.use_provider("foundry"):
-        contract = owner.deploy(contract_container)
+        contract = owner.deploy(vyper_contract_container)
         assert isinstance(contract, ContractInstance)  # Didn't fail
 
 
@@ -216,15 +216,16 @@ def test_connect_light_client(mocker, networks, owner, contract_container):
 
 
 @pytest.mark.fork
-@pytest.mark.parametrize("network,port", [("amoy", 9878), ("mainnet", 9879)])
-def test_provider_settings(networks, network, port):
-    expected_block_number = 1234
+@pytest.mark.parametrize(
+    "network,port,block", [("amoy", 9878, 29516948), ("mainnet", 9879, 79493440)]
+)
+def test_provider_settings(networks, network, port, block):
     settings = {
         "host": f"http://127.0.0.1:{port}",
         "fork": {
             "polygon": {
                 network: {
-                    "block_number": expected_block_number,
+                    "block_number": block,
                 }
             }
         },
@@ -234,10 +235,10 @@ def test_provider_settings(networks, network, port):
     )
     actual = provider_ctx._provider.settings
     assert actual.host == settings["host"]
-    assert actual.fork["polygon"][network]["block_number"] == expected_block_number
+    assert actual.fork["polygon"][network]["block_number"] == block
 
     with provider_ctx as provider:
-        assert provider.fork_block_number == expected_block_number
+        assert provider.fork_block_number == block
 
 
 @pytest.mark.fork

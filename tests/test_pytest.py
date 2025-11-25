@@ -65,10 +65,10 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
             gas_header_line_index = index
 
     assert gas_header_line_index is not None, "'Gas Profile' not in output."
-    expected = expected_report.split("\n")[1:]
+    expected = [x.rstrip() for x in expected_report.split("\n")[1:] if x.rstrip()]
     start_index = gas_header_line_index + 1
     end_index = start_index + len(expected)
-    actual = [x.rstrip() for x in result.outlines[start_index:end_index] if x.rstrip]
+    actual = [x.rstrip() for x in result.outlines[start_index:end_index] if x.rstrip()]
     assert "WARNING: No gas usage data found." not in actual, "Gas data missing!"
 
     actual_len = len(actual)
@@ -77,6 +77,7 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
     if actual_len > expected_len:
         remainder = "\n".join(actual[expected_len:])
         pytest.fail(f"Actual contains more than expected:\n{remainder}")
+
     elif expected_len > actual_len:
         remainder = "\n".join(expected[actual_len:])
         pytest.fail(f"Expected contains more than actual:\n{remainder}")

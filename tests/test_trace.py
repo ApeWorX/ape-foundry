@@ -158,8 +158,13 @@ def assert_rich_output(rich_capture: list[str], expected: str):
 
 def test_extract_custom_error_trace_given(mocker, connected_provider):
     trace = mocker.MagicMock()
+
+    class MockTrace:
+        def __call__(self, *args, **kwargs):
+            return trace
+
     trace.revert_message = "Unauthorized"
-    actual = connected_provider._extract_custom_error(trace=trace)
+    actual = connected_provider._extract_custom_error(trace=MockTrace())
     assert "Unauthorized" in actual
 
 

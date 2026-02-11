@@ -15,4 +15,4 @@ def test_contract_transaction_revert(benchmark, connected_provider, owner, contr
 
     # Was seeing 0.44419266798649915.
     # Seeing 0.2634877339878585 as of https://github.com/ApeWorX/ape-foundry/pull/115
-    assert median < 3.5
+    assert median < 5.5

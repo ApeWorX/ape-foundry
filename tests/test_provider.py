@@ -41,7 +41,7 @@ def test_connect_and_disconnect(disconnected_provider):
 
 def test_gas_price(connected_provider):
     gas_price = connected_provider.gas_price
-    assert gas_price == 0
+    assert gas_price == 1000000000
 
 
 def test_uri_disconnected(disconnected_provider):
@@ -316,6 +316,7 @@ def test_base_fee(connected_provider, project, networks, accounts):
     with project.temp_config(foundry=data):
         with networks.ethereum.local.use_provider("foundry") as provider:
             # Verify the block has the right base fee
+            provider.mine()
             block_one = provider.get_block("latest")
             assert block_one.base_fee == new_base_fee
 

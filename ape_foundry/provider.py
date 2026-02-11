@@ -4,7 +4,6 @@ import shutil
 from bisect import bisect_right
 from subprocess import PIPE, call
 from typing import TYPE_CHECKING, Literal, Optional, Union, cast
-from unittest.mock import MagicMock
 
 from ape.api import (
     BlockAPI,
@@ -658,7 +657,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                 pass
 
         if trace:
-            if callable(trace) and not isinstance(trace, MagicMock):
+            if callable(trace):
                 trace = trace()
 
             if revert_msg := trace.revert_message:

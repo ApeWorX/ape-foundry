@@ -57,6 +57,10 @@ def providers():
     yield "blast", "mainnet-fork", FoundryForkProvider
     yield "blast", "sepolia-fork", FoundryForkProvider
 
+    yield "sonic", LOCAL_NETWORK_NAME, FoundryProvider
+    yield "sonic", "mainnet-fork", FoundryForkProvider
+    yield "sonic", "blaze-fork", FoundryForkProvider
+
 
 def __getattr__(name: str):
     if name == "FoundryForkProvider":

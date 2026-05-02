@@ -865,6 +865,14 @@ class FoundryForkProvider(FoundryProvider):
 
         cmd = super().build_command()
         cmd.extend(("--fork-url", self.fork_url))
+        upstream_headers = self.network_manager.get_request_headers(
+            self.forked_network.ecosystem.name,
+            self.forked_network.upstream_network.name,
+            self.upstream_provider_name,
+        )
+        for key, value in upstream_headers.items():
+            cmd.extend(("--fork-header", f"{key}: {value}"))
+
         if self.fork_block_number is not None:
             cmd.extend(("--fork-block-number", str(self.fork_block_number)))
 

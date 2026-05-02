@@ -1,4 +1,5 @@
 import os
+from unittest.mock import PropertyMock
 
 import pytest
 from ape import convert, reverts
@@ -13,7 +14,7 @@ from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
-from ape_foundry.provider import FOUNDRY_CHAIN_ID, FOUNDRY_REVERT_PREFIX
+from ape_foundry.provider import FOUNDRY_CHAIN_ID, FOUNDRY_REVERT_PREFIX, FoundryForkProvider
 from eth_pydantic_types import HexBytes32
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
@@ -476,6 +477,31 @@ def test_prepare_tx_with_max_gas(tx_type, connected_provider, ethereum, owner):
     # NOTE: The local network by default uses max_gas.
     actual = connected_provider.prepare_transaction(tx)
     assert actual.gas_limit == connected_provider.max_gas
+
+
+def test_fork_build_command_adds_upstream_request_headers(mocker, name, mainnet_fork):
+    provider = mainnet_fork.get_provider(name)
+    mocker.patch.object(
+        FoundryForkProvider,
+        "fork_url",
+        new_callable=PropertyMock,
+        return_value="https://example.com",
+    )
+    get_request_headers = mocker.patch.object(
+        provider.network_manager,
+        "get_request_headers",
+        return_value={
+            "Authorization": "Bearer test-token",
+            "X-Trace": "trace-id",
+        },
+    )
+
+    cmd = provider.build_command()
+
+    get_request_headers.assert_called_once_with("ethereum", "mainnet", provider.upstream_provider_name)
+    assert cmd.count("--fork-header") == 2
+    assert "Authorization: Bearer test-token" in cmd
+    assert "X-Trace: trace-id" in cmd
 
 
 def test_disable_block_gas_limit(project, disconnected_provider):

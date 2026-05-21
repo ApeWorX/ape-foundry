@@ -134,7 +134,7 @@ def assert_rich_output(rich_capture: list[str], expected: str):
     assert actual_lines, "No output."
     output = "\n".join(actual_lines)
 
-    for actual, expected in zip(actual_lines, expected_lines):
+    for actual, expected in zip(actual_lines, expected_lines, strict=True):
         fail_message = f"""\n
         \tPattern: {expected}\n
         \tLine   : {actual}\n

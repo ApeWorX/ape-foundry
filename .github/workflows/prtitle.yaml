@@ -8,21 +8,11 @@ on:
       - synchronize
 
 jobs:
-    check:
-        runs-on: ubuntu-latest
+  check:
+    runs-on: ubuntu-latest
 
-        steps:
-        - uses: actions/checkout@v5
+    steps:
+    - uses: astral-sh/setup-uv@v7
 
-        - name: Setup Python
-          uses: actions/setup-python@v5
-          with:
-              python-version: "3.10"
-
-        - name: Install Dependencies
-          run: pip install commitizen
-
-        - name: Check PR Title
-          env:
-              TITLE: ${{ github.event.pull_request.title }}
-          run: cz check --message "$TITLE"
+    - name: Check PR Title
+      run: uvx commitlint "${{ github.event.pull_request.title }}"

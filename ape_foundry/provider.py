@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import os
 import random
 import shutil
 from bisect import bisect_right
 from subprocess import PIPE, call
-from typing import TYPE_CHECKING, Literal, Optional, Union, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from ape.api import (
     BlockAPI,
@@ -74,13 +76,13 @@ FOUNDRY_REVERT_PREFIX = (
 
 
 class FoundryForkConfig(PluginConfig):
-    upstream_provider: Optional[str] = None
-    block_number: Optional[int] = None
-    evm_version: Optional[str] = None
+    upstream_provider: str | None = None
+    block_number: int | None = None
+    evm_version: str | None = None
 
 
 class FoundryNetworkConfig(PluginConfig):
-    host: Optional[Union[str, Literal["auto"]]] = None
+    host: str | Literal["auto"] | None = None
     """The host address or ``"auto"`` to use localhost with a random port (with attempts)."""
 
     manage_process: bool = True
@@ -89,7 +91,7 @@ class FoundryNetworkConfig(PluginConfig):
     Defaults to ``True``. If ``host`` is remote, will not be able to start.
     """
 
-    evm_version: Optional[str] = None
+    evm_version: str | None = None
     """The EVM hardfork to use, e.g. `shanghai`."""
 
     # Retry strategy configs, try increasing these if you're getting FoundrySubprocessError
@@ -117,13 +119,13 @@ class FoundryNetworkConfig(PluginConfig):
     Automatically mine blocks instead of manually doing so.
     """
 
-    block_time: Optional[int] = None
+    block_time: int | None = None
     """
     Set a block time to allow mining to happen on an interval
     rather than only when a new transaction is submitted.
     """
 
-    use_optimism: Optional[bool] = None
+    use_optimism: bool | None = None
     """
     Configure the node to run with the `--optimism` flag.
     NOTE: When using Optimism-based networks (including Base),
@@ -143,11 +145,11 @@ def _call(*args):
 
 
 class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
-    _host: Optional[str] = None
+    _host: str | None = None
     attempted_ports: list[int] = []
-    cached_chain_id: Optional[int] = None
+    cached_chain_id: int | None = None
     _did_warn_wrong_node = False
-    _disconnected: Optional[bool] = None
+    _disconnected: bool | None = None
 
     @property
     def unlocked_accounts(self) -> list[AddressType]:
@@ -174,7 +176,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         return "anvil"
 
     @property
-    def connection_id(self) -> Optional[str]:
+    def connection_id(self) -> str | None:
         return f"{self.network_choice}:{self._host}"
 
     @property
@@ -198,7 +200,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         )
 
     @property
-    def _port(self) -> Optional[int]:
+    def _port(self) -> int | None:
         return URL(self.uri).port
 
     @property
@@ -274,7 +276,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     @property
     def gas_price(self) -> int:
-        if self.process is not None:
+        if self.process is not None and self.settings.gas_price:
             # NOTE: Workaround for bug where RPC does not honor CLI flag.
             return self.settings.gas_price
 
@@ -294,7 +296,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
         self.make_request("anvil_setAutomine", [value])
 
     @property
-    def evm_version(self) -> Optional[str]:
+    def evm_version(self) -> str | None:
         return self.settings.evm_version
 
     @property
@@ -499,7 +501,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
         return cmd
 
-    def set_balance(self, account: AddressType, amount: Union[int, float, str, bytes]):
+    def set_balance(self, account: AddressType, amount: int | float | str | bytes):
         is_str = isinstance(amount, str)
         is_key_word = is_str and " " in amount  # type: ignore
         _is_hex = is_str and not is_key_word and amount.startswith("0x")  # type: ignore
@@ -530,7 +532,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def snapshot(self) -> str:
         return self.make_request("evm_snapshot", [])
 
-    def restore(self, snapshot_id: "SnapshotID") -> bool:
+    def restore(self, snapshot_id: SnapshotID) -> bool:
         snapshot_id = to_hex(snapshot_id) if isinstance(snapshot_id, int) else snapshot_id
         result = self.make_request("evm_revert", [snapshot_id])
         return result is True
@@ -542,7 +544,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def relock_account(self, address: AddressType):
         self.make_request("anvil_stopImpersonatingAccount", [address])
 
-    def get_balance(self, address: AddressType, block_id: Optional["BlockID"] = None) -> int:
+    def get_balance(self, address: AddressType, block_id: BlockID | None = None) -> int:
         if result := self.make_request("eth_getBalance", [address, block_id]):
             return int(result, 16) if isinstance(result, str) else result
 
@@ -601,7 +603,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
 
     # The type ignore is because are using **kwargs rather than repeating.
     def _handle_execution_reverted(  # type: ignore[override]
-        self, exception: Exception, revert_message: Optional[str] = None, **kwargs
+        self, exception: Exception, revert_message: str | None = None, **kwargs
     ):
         trace = kwargs.get("trace")
         txn = kwargs.get("txn")
@@ -669,7 +671,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_block_gas_limit(self, gas_limit: int) -> bool:
         return self.make_request("evm_setBlockGasLimit", [hex(gas_limit)]) is True
 
-    def set_code(self, address: AddressType, code: "ContractCode") -> bool:
+    def set_code(self, address: AddressType, code: ContractCode) -> bool:
         if isinstance(code, bytes):
             code = to_hex(code)
 
@@ -742,7 +744,7 @@ class FoundryForkProvider(FoundryProvider):
         plugin_config = cls.config_manager.get_config(value["name"])
         config_settings = plugin_config.get("fork", {})
 
-        def _get_upstream(data: dict) -> Optional[str]:
+        def _get_upstream(data: dict) -> str | None:
             return (
                 data.get(ecosystem_name, {})
                 .get(network.name.replace("-fork", ""), {})
@@ -756,17 +758,17 @@ class FoundryForkProvider(FoundryProvider):
         return value
 
     @property
-    def fork_block_number(self) -> Optional[int]:
+    def fork_block_number(self) -> int | None:
         return self._fork_config.block_number
 
     @property
-    def evm_version(self) -> Optional[str]:
+    def evm_version(self) -> str | None:
         if evm_version := self._fork_config.evm_version:
             return evm_version
 
         return self.settings.evm_version
 
-    def get_block(self, block_id: "BlockID") -> BlockAPI:
+    def get_block(self, block_id: BlockID) -> BlockAPI:
         if isinstance(block_id, str) and block_id.isnumeric():
             block_id = int(block_id)
 
@@ -778,7 +780,7 @@ class FoundryForkProvider(FoundryProvider):
 
         return self.network.ecosystem.decode_block(block_data)
 
-    def detect_evm_version(self) -> Optional[str]:
+    def detect_evm_version(self) -> str | None:
         if self.fork_block_number is None:
             return None
 
@@ -873,8 +875,8 @@ class FoundryForkProvider(FoundryProvider):
 
         return cmd
 
-    def reset_fork(self, block_number: Optional[int] = None):
-        forking_params: dict[str, Union[str, int]] = {"jsonRpcUrl": self.fork_url}
+    def reset_fork(self, block_number: int | None = None):
+        forking_params: dict[str, str | int] = {"jsonRpcUrl": self.fork_url}
         block_number = block_number if block_number is not None else self.fork_block_number
         if block_number is not None:
             forking_params["blockNumber"] = block_number

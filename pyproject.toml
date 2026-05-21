@@ -1,12 +1,106 @@
 [build-system]
-requires = ["setuptools>=75.6.0", "wheel", "setuptools_scm[toml]>=5.0"]
+requires = ["setuptools>=75.6.0", "setuptools_scm[toml]>=5.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ape-foundry"
+description = "ape-foundry: Ape network provider for Foundry"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+keywords = ["ethereum", "ape", "foundry", "anvil"]
+authors = [
+    {name = "ApeWorX Ltd.", email = "admin@apeworx.io"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "eth-ape>=0.8.34,<0.9",
+    "eth_pydantic_types>=0.2.0,<0.3",
+    "evm-trace>=0.2.3,<0.3",
+    "ethpm-types>=0.6.19,<0.7",
+    "hexbytes>=0.3.1,<2",
+    "web3>=6.20.1,<8",
+    "yarl>=1.9.2,<2",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/ApeWorX/ape-foundry"
+Documentation = "https://github.com/ApeWorX/ape-foundry/tree/main/docs"
+Source = "https://github.com/ApeWorX/ape-foundry"
+Tracker = "https://github.com/ApeWorX/ape-foundry/issues"
+
+[dependency-groups]
+test = [
+    "pytest>=8.0,<9.0",
+    "pytest-xdist",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-benchmark",
+    "hypothesis>=6.2.0,<7.0",
+    "ape-alchemy>=0.8.9",
+    "ape-polygon",
+    "ape-optimism",
+    "ape-tokens",
+]
+lint = [
+    "mypy>=1.13.0,<2",
+    "types-setuptools",
+    "types-requests",
+    "types-PyYAML",
+    "ruff>=0.12.0,<1",
+    "mdformat>=0.7.19",
+    "mdformat-gfm>=0.3.5",
+    "mdformat-frontmatter>=0.4.1",
+    "mdformat-pyproject>=0.0.2",
+]
+docs = [
+    "sphinx-ape",
+]
+release = [
+    "setuptools>=75.6.0",
+    "wheel",
+    "twine",
+]
+dev = [
+    {include-group = "test"},
+    {include-group = "lint"},
+    {include-group = "docs"},
+    {include-group = "release"},
+    "commitizen",
+    "prek",
+    "IPython",
+    "ipdb",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "tests.*"]
+
+[tool.setuptools.package-data]
+ape_foundry = ["py.typed"]
+
+[tool.setuptools_scm]
+write_to = "ape_foundry/version.py"
 
 [tool.mypy]
 exclude = "build/"
 plugins = ["pydantic.mypy"]
-
-[tool.setuptools_scm]
-write_to = "ape_foundry/version.py"
 
 [tool.pytest.ini_options]
 markers = [
@@ -15,7 +109,7 @@ markers = [
 ]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 100
 
 [tool.ruff.lint]

@@ -8,6 +8,13 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+concurrency:
+  # Cancel older, in-progress jobs from the same PR, same workflow.
+  # use run_id if the job is triggered by a push to ensure
+  # push-triggered jobs to not get canceled.
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -16,12 +23,19 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
       with:
         python-version: "3.10"
+
+    - name: Install Dependencies
+      run: uv sync --group docs
+
+    - name: Add venv to PATH
+      run: echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
+      # NOTE: Otherwise the next action nukes the path when it starts
 
     - name: Ape Docs
       uses: apeworx/sphinx-ape@main

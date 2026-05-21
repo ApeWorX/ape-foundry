@@ -5,7 +5,7 @@ Foundry is a development framework written in Rust for Ethereum that includes a 
 
 ## Dependencies
 
-- [python3](https://www.python.org/downloads) version 3.9 up to 3.12.
+- [Python 3](https://www.python.org/downloads) version 3.10 or greater.
 - Foundry. See Foundry's [Installation](https://github.com/foundry-rs/foundry#installation) documentation for steps.
 
 ## Installation
@@ -18,14 +18,23 @@ You can install the latest release via [`pip`](https://pypi.org/project/pip/):
 pip install ape-foundry
 ```
 
-### via `setuptools`
+### via `ape`
 
-You can clone the repository and use [`setuptools`](https://github.com/pypa/setuptools) for the most up-to-date version:
+You can also install via `ape`:
+
+```bash
+ape plugins install foundry
+```
+
+### via source
+
+You can clone the repository and install for development:
 
 ```bash
 git clone https://github.com/ApeWorX/ape-foundry.git
 cd ape-foundry
-python3 setup.py install
+uv sync --group dev
+uv run prek install
 ```
 
 ## Quick Usage

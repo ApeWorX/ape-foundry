@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ape-foundry"
-description = "ape-foundry: Ape plugin"
+description = "ape-foundry: Ape network provider for Foundry"
 readme = "README.md"
 authors = [
     {name = "ApeWorX Ltd.", email = "admin@apeworx.io"}

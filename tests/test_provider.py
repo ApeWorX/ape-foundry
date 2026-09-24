@@ -8,13 +8,13 @@ from ape.contracts import ContractContainer
 from ape.exceptions import ContractLogicError, TransactionError, VirtualMachineError
 from ape_ethereum.trace import Trace
 from ape_ethereum.transactions import TransactionStatusEnum, TransactionType
+from eth_pydantic_types import HexBytes32
 from eth_utils import to_hex, to_int
 from evm_trace import CallType
 from hexbytes import HexBytes
 
 from ape_foundry import FoundryProviderError
 from ape_foundry.provider import FOUNDRY_CHAIN_ID, FOUNDRY_REVERT_PREFIX
-from eth_pydantic_types import HexBytes32
 
 TEST_WALLET_ADDRESS = "0xD9b7fdb3FC0A0Aa3A507dCf0976bc23D49a9C7A3"
 
@@ -394,13 +394,15 @@ def test_block_time(project, local_network, connected_provider):
 
 
 def test_remote_host(project, local_network, no_anvil_bin):
-    with project.temp_config(foundry={"host": "https://example.com"}):
-        with pytest.raises(
+    with (
+        project.temp_config(foundry={"host": "https://example.com"}),
+        pytest.raises(
             FoundryProviderError,
             match=r"Failed to connect to remote Anvil node at 'https://example.com'\.",
-        ):
-            with local_network.use_provider("foundry"):
-                assert True
+        ),
+        local_network.use_provider("foundry"),
+    ):
+        assert True
 
 
 def test_remote_host_using_env_var(local_network, no_anvil_bin):
@@ -408,14 +410,16 @@ def test_remote_host_using_env_var(local_network, no_anvil_bin):
     os.environ["APE_FOUNDRY_HOST"] = "https://example2.com"
 
     try:
-        with pytest.raises(
-            FoundryProviderError,
-            match=r"Failed to connect to remote Anvil node at 'https://example2.com'\.",
+        with (
+            pytest.raises(
+                FoundryProviderError,
+                match=r"Failed to connect to remote Anvil node at 'https://example2.com'\.",
+            ),
+            local_network.use_provider("foundry") as provider,
         ):
-            with local_network.use_provider("foundry") as provider:
-                # It shouldn't actually get to the line below,
-                # but in case it does, this is a helpful debug line.
-                assert provider.uri == os.environ["APE_FOUNDRY_HOST"], "env var not setting."
+            # It shouldn't actually get to the line below,
+            # but in case it does, this is a helpful debug line.
+            assert provider.uri == os.environ["APE_FOUNDRY_HOST"], "env var not setting."
 
     finally:
         if original is None:

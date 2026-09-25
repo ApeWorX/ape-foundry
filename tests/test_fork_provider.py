@@ -277,12 +277,14 @@ def test_fork_config_none():
     assert isinstance(cfg["fork"], dict)
 
 
+@pytest.mark.fork
 def test_deal_erc20(accounts, usdc, mainnet_fork_provider):
     acct = accounts[0]
     mainnet_fork_provider.deal_erc20(acct, usdc, 123)
     assert usdc.balanceOf(acct) == 123
 
 
+@pytest.mark.fork
 def test_set_erc20_allowance(accounts, usdc, mainnet_fork_provider):
     acct = accounts[0]
     spender = accounts[1]

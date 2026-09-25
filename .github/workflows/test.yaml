@@ -77,7 +77,7 @@ jobs:
           run: uv sync --group test
 
         - name: Run Tests
-          run: uv run pytest -m "not fork and not manual and not fuzzing" -s --cov=ape_foundry -n auto
+          run: uv run pytest -m "not fork and not manual and not fuzzing" -s --cov=ape_foundry
 
         - name: Run Fork Tests (public RPC)
           # Only run fork tests if not from a forked PR (matches main's guard)

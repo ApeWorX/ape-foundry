@@ -44,7 +44,9 @@ from web3.gas_strategies.rpc import rpc_gas_price_strategy
 try:
     from web3.middleware import ExtraDataToPOAMiddleware  # type: ignore
 except ImportError:
-    from web3.middleware import geth_poa_middleware as ExtraDataToPOAMiddleware  # type: ignore
+    from web3.middleware import (
+        geth_poa_middleware as ExtraDataToPOAMiddleware,  # type: ignore  # noqa: N812
+    )
 
 from web3.middleware.validation import MAX_EXTRADATA_LENGTH
 from yarl import URL
@@ -337,7 +339,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
                     timeout = 10
                     iterations = 0
                     while iterations < timeout:
-                        logged_lines = [x for x in self.stdout_logs_path.read_text().split("\n")]
+                        logged_lines = list(self.stdout_logs_path.read_text().split("\n"))
                         for line in logged_lines:
                             if line.startswith(wait_for_key):
                                 return

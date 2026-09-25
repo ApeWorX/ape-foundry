@@ -65,10 +65,12 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
             gas_header_line_index = index
 
     assert gas_header_line_index is not None, "'Gas Profile' not in output."
-    expected = [x.rstrip() for x in expected_report.split("\n")[1:] if x.rstrip()]
+    # Keep blank lines so Rich table spacing matches eth-ape --gas output
+    # (filtering blanks then slicing outlines under-counts TokenB section).
+    expected = [x.rstrip() for x in expected_report.rstrip().split("\n")[1:]]
     start_index = gas_header_line_index + 1
     end_index = start_index + len(expected)
-    actual = [x.rstrip() for x in result.outlines[start_index:end_index] if x.rstrip()]
+    actual = [x.rstrip() for x in result.outlines[start_index:end_index]]
     assert "WARNING: No gas usage data found." not in actual, "Gas data missing!"
 
     actual_len = len(actual)
@@ -82,7 +84,7 @@ def run_gas_test(result, expected_report: str = EXPECTED_GAS_REPORT):
         remainder = "\n".join(expected[actual_len:])
         pytest.fail(f"Expected contains more than actual:\n{remainder}")
 
-    for actual_line, expected_pattern in zip(actual, expected, strict=False):
+    for actual_line, expected_pattern in zip(actual, expected, strict=True):
         message = f"Pattern: {expected_pattern}, Line: '{actual_line}'."
         assert re.match(expected_pattern, actual_line), message
 

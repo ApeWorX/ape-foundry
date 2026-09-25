@@ -17,16 +17,19 @@ polygon:
 node:
   ethereum:
     mainnet:
-      uri: https://ethereum.publicnode.com
+      uri: https://eth.drpc.org
     sepolia:
-      uri: https://ethereum-sepolia-rpc.publicnode.com
+      uri: https://sepolia.gateway.tenderly.co
     holesky:
+      # Holesky sunset: no free public archive RPC remaining (drpc paid-only;
+      # publicnode/tenderly/1rpc/ankr free endpoints dead or key-gated).
+      # Kept for test_fork_config; do not start holesky forks in CI.
       uri: https://ethereum-holesky-rpc.publicnode.com
   polygon:
     amoy:
-      uri: https://polygon-amoy-bor-rpc.publicnode.com
+      uri: https://polygon-amoy.drpc.org
     mainnet:
-      uri: https://polygon-bor-rpc.publicnode.com
+      uri: https://polygon.drpc.org
 
 foundry:
   request_timeout: 29

@@ -58,12 +58,19 @@ def test_multiple_providers(
     assert networks.active_provider.uri == default_host
 
 
+EXPECTED_UPSTREAM = {
+    "mainnet": "https://ethereum.publicnode.com",
+    "sepolia": "https://ethereum-sepolia-rpc.publicnode.com",
+    "holesky": "https://ethereum-holesky-rpc.publicnode.com",
+}
+
+
 @pytest.mark.parametrize("network", NETWORKS)
 def test_fork_config(name, config, network):
     plugin_config = config.get_config(name)
     network_config = plugin_config["fork"].get("ethereum", {}).get(network, {})
     message = f"Config not registered for network '{network}'."
-    assert network_config.get("upstream_provider") == "alchemy", message
+    assert network_config.get("upstream_provider") == EXPECTED_UPSTREAM[network], message
 
 
 @pytest.mark.fork

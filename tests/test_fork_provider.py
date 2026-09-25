@@ -226,7 +226,7 @@ def test_connect_light_client(mocker, networks, owner, contract_container):
 
 @pytest.mark.fork
 @pytest.mark.parametrize(
-    "network,port,block", [("amoy", 9878, 48486472), ("mainnet", 9879, 79493440)]
+    "network,port,block", [("amoy", 9878, 48487130), ("mainnet", 9879, 79493440)]
 )
 def test_provider_settings(networks, network, port, block):
     settings = {

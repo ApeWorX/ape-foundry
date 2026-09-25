@@ -27,7 +27,7 @@ node:
       uri: https://ethereum-holesky-rpc.publicnode.com
   polygon:
     amoy:
-      uri: https://polygon-amoy.drpc.org
+      uri: https://polygon-amoy.gateway.tenderly.co
     mainnet:
       uri: https://polygon.drpc.org
 

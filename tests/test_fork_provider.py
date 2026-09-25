@@ -59,9 +59,9 @@ def test_multiple_providers(
 
 
 EXPECTED_UPSTREAM = {
-    "mainnet": "https://ethereum.publicnode.com",
-    "sepolia": "https://ethereum-sepolia-rpc.publicnode.com",
-    "holesky": "https://ethereum-holesky-rpc.publicnode.com",
+    "mainnet": "node",
+    "sepolia": "node",
+    "holesky": "node",
 }
 
 

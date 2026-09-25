@@ -37,13 +37,13 @@ foundry:
   fork:
     ethereum:
       mainnet:
-        upstream_provider: https://ethereum.publicnode.com
+        upstream_provider: node
         block_number: 21418244
       sepolia:
-        upstream_provider: https://ethereum-sepolia-rpc.publicnode.com
+        upstream_provider: node
         block_number: 3091950
       holesky:
-        upstream_provider: https://ethereum-holesky-rpc.publicnode.com
+        upstream_provider: node
         block_number: 100
 
 test:

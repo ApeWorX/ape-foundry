@@ -19,8 +19,10 @@ def mainnet_fork_contract_instance(owner, contract_container, mainnet_fork_provi
     return owner.deploy(contract_container)
 
 
-@pytest.fixture(scope="module")
-def usdc(chain):
+@pytest.fixture
+def usdc(mainnet_fork_provider):
+    from ape import chain
+
     return chain.contracts.instance_at(
         "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", contract_type=ERC20
     )
@@ -224,7 +226,7 @@ def test_connect_light_client(mocker, networks, owner, contract_container):
 
 @pytest.mark.fork
 @pytest.mark.parametrize(
-    "network,port,block", [("amoy", 9878, 29516948), ("mainnet", 9879, 79493440)]
+    "network,port,block", [("amoy", 9878, 48486472), ("mainnet", 9879, 79493440)]
 )
 def test_provider_settings(networks, network, port, block):
     settings = {

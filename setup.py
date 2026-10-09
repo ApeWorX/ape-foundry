@@ -71,7 +71,7 @@ setup(
     install_requires=[
         "eth-ape>=0.8.34,<0.9",
         "eth_pydantic_types>=0.2.0,<0.3",
-        "evm-trace>=0.2.3,<0.3",
+        "evm-trace>=0.2.3,<0.4",
         "ethpm-types>=0.6.19,<0.7",
         "hexbytes>=0.3.1,<2",
         "web3>=6.20.1,<8",

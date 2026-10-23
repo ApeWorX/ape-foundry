@@ -15,4 +15,6 @@ jobs:
     - uses: astral-sh/setup-uv@v7
 
     - name: Check PR Title
-      run: uvx commitlint "${{ github.event.pull_request.title }}"
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
+      run: uvx commitlint "$PR_TITLE"

@@ -3,7 +3,7 @@ import random
 import shutil
 from bisect import bisect_right
 from subprocess import PIPE, call
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from ape.api import (
     BlockAPI,
@@ -546,7 +546,7 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def relock_account(self, address: AddressType):
         self.make_request("anvil_stopImpersonatingAccount", [address])
 
-    def get_balance(self, address: AddressType, block_id: Optional["BlockID"] = None) -> int:
+    def get_balance(self, address: AddressType, block_id: "BlockID | None" = None) -> int:
         if result := self.make_request("eth_getBalance", [address, block_id]):
             return int(result, 16) if isinstance(result, str) else result
 

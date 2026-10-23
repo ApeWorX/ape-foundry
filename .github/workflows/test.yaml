@@ -78,12 +78,12 @@ jobs:
           run: uv sync --group test
 
         - name: Run Tests
-          run: uv run pytest -m "not fork and not manual and not fuzzing" -s --cov=ape_foundry
+          run: uv run ape test -m "not fork and not manual and not fuzzing" -s --cov=ape_foundry
 
         - name: Run Fork Tests (public RPC)
           # Only run fork tests if not from a forked PR (matches main's guard)
           if: github.event.pull_request.head.repo.full_name == github.repository
-          run: uv run pytest -m fork -s
+          run: uv run ape test -m fork -s
 
 # NOTE: uncomment this block after you've marked tests with @pytest.mark.fuzzing
 #    fuzzing:
@@ -104,4 +104,4 @@ jobs:
 #          run: uv sync --group test
 #
 #        - name: Run Tests
-#          run: uv run pytest -m "fuzzing" --no-cov -s
+#          run: uv run ape test -m "fuzzing" --no-cov -s

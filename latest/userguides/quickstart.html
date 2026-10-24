@@ -7,7 +7,7 @@
     function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
     setColorMode(localStorage._theme||"auto");
   </script><link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=e1a1ceaf" />
-    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=83cb36c2" />
+    <link rel="stylesheet" type="text/css" href="../_static/shibuya.css?v=2ceb65ce" />
     <link media="print" rel="stylesheet" type="text/css" href="../_static/print.css?v=20ff2c19" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,8 @@
   --sy-f-heading: "Inter", var(--sy-f-sys), var(--sy-f-cjk), sans-serif;
 }
 </style>
-    <meta property="og:type" content="website"/>
+    
+  <meta property="og:type" content="website"/>
   <meta property="og:url" content="ape-foundry/userguides/quickstart.html"/>
   <meta property="og:title" content="Quick Start"/>
     <meta name="twitter:card" content="summary"/>
@@ -117,15 +118,12 @@ data-aria-dark="Switch to auto color mode">
   </div>
 </div><div class="flex flex-col break-words justify-between">
       <div class="relative min-w-0 max-w-6xl px-6 pb-6 pt-8 xl:px-12">
-  
-
-
-<div class="copy-page-wrapper relative pb-4 lg:absolute lg:top-8 lg:right-6 xl:right-12">
+  <div class="copy-page-wrapper relative pb-4 lg:absolute lg:top-8 lg:right-6 xl:right-12">
   <div id="copy-page-trigger">
     <button
       type="button"
       class="js-copy px-3 py-1 inline-flex items-center gap-1"
-      data-url="../_sources/userguides/quickstart.md.txt"
+      data-url="ape-foundry/_sources/userguides/quickstart.md.txt"
     >
       <i class="i-lucide" data-icon="copy"></i>
       <span>Copy page</span>
@@ -139,58 +137,45 @@ data-aria-dark="Switch to auto color mode">
     <div role="presentation">
       <div class="flex flex-col" role="group">
         <button class="js-copy" type="button" role="menuitem"
-          data-url="../_sources/userguides/quickstart.md.txt">
+          data-url="ape-foundry/_sources/userguides/quickstart.md.txt">
           <span class="iconify-icon">
             <i class="i-lucide" data-icon="copy"></i>
           </span>
           <span>Copy page</span>
         </button>
-        <a role="menuitem" href="../_sources/userguides/quickstart.md.txt" target="_blank" rel="nofollow">
-          
-            <iconify-icon icon="bi:markdown"></iconify-icon>
-            <span>View as Markdown</span>
-          
-        </a>
-        
-        <a role="menuitem" href="https://chatgpt.com/?hints=search&q=Read%20../_sources/userguides/quickstart.md.txt%20so%20I%20can%20ask%20questions%20about%20it." target="_blank" rel="nofollow">
+        <a role="menuitem" href="ape-foundry/_sources/userguides/quickstart.md.txt" target="_blank" rel="nofollow"><iconify-icon icon="bi:markdown"></iconify-icon>
+            <span>View as Markdown</span></a><a role="menuitem" href="https://chatgpt.com/?hints=search&q=Read%20ape-foundry/_sources/userguides/quickstart.md.txt%20so%20I%20can%20ask%20questions%20about%20it." target="_blank" rel="nofollow">
           <iconify-icon icon="bi:openai"></iconify-icon>
           <span>Open in ChatGPT</span>
-        </a>
-        
-        
-        <a role="menuitem" href="https://claude.ai/new?q=Read%20../_sources/userguides/quickstart.md.txt%20so%20I%20can%20ask%20questions%20about%20it." target="_blank" rel="nofollow">
+        </a><a role="menuitem" href="https://claude.ai/new?q=Read%20ape-foundry/_sources/userguides/quickstart.md.txt%20so%20I%20can%20ask%20questions%20about%20it." target="_blank" rel="nofollow">
           <iconify-icon icon="bi:claude"></iconify-icon>
           <span>Open in Claude</span>
-        </a>
-        
-        
-      </div>
+        </a></div>
     </div>
   </div>
-</div>
-<article class="yue" role="main">
+</div><article class="yue" role="main">
           <section id="quick-start">
-<h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h1>
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h1>
 <p>Foundry network provider plugin for Ape.
 Foundry is a development framework written in Rust for Ethereum that includes a local network implementation.</p>
 <section id="dependencies">
-<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h2>
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p><a class="reference external" href="https://www.python.org/downloads">python3</a> version 3.9 up to 3.12.</p></li>
 <li><p>Foundry. See Foundry’s <a class="reference external" href="https://github.com/foundry-rs/foundry#installation">Installation</a> documentation for steps.</p></li>
 </ul>
 </section>
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
 <section id="via-pip">
-<h3>via <code class="docutils literal notranslate"><span class="pre">pip</span></code><a class="headerlink" href="#via-pip" title="Link to this heading"></a></h3>
+<h3>via <code class="docutils literal notranslate"><span class="pre">pip</span></code><a class="headerlink" href="#via-pip" title="Link to this heading">#</a></h3>
 <p>You can install the latest release via <a class="reference external" href="https://pypi.org/project/pip/"><code class="docutils literal notranslate"><span class="pre">pip</span></code></a>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1">pip<span class="w"> </span>install<span class="w"> </span>ape-foundry
 </span></pre></div>
 </div>
 </section>
 <section id="via-setuptools">
-<h3>via <code class="docutils literal notranslate"><span class="pre">setuptools</span></code><a class="headerlink" href="#via-setuptools" title="Link to this heading"></a></h3>
+<h3>via <code class="docutils literal notranslate"><span class="pre">setuptools</span></code><a class="headerlink" href="#via-setuptools" title="Link to this heading">#</a></h3>
 <p>You can clone the repository and use <a class="reference external" href="https://github.com/pypa/setuptools"><code class="docutils literal notranslate"><span class="pre">setuptools</span></code></a> for the most up-to-date version:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span data-line="1">git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ApeWorX/ape-foundry.git
 </span><span data-line="2"><span class="nb">cd</span><span class="w"> </span>ape-foundry
@@ -200,7 +185,7 @@ Foundry is a development framework written in Rust for Ethereum that includes a 
 </section>
 </section>
 <section id="quick-usage">
-<h2>Quick Usage<a class="headerlink" href="#quick-usage" title="Link to this heading"></a></h2>
+<h2>Quick Usage<a class="headerlink" href="#quick-usage" title="Link to this heading">#</a></h2>
 <p>Use the <code class="docutils literal notranslate"><span class="pre">--network</span> <span class="pre">ethereum:local:foundry</span></code> command line flag to use the foundry network (if it’s not already configured as the default).</p>
 <p>This network provider takes additional Foundry-specific configuration options. To use them, add these configs in your project’s <code class="docutils literal notranslate"><span class="pre">ape-config.yaml</span></code>:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
@@ -221,7 +206,7 @@ Foundry is a development framework written in Rust for Ethereum that includes a 
 </div>
 </section>
 <section id="mainnet-fork">
-<h2>Mainnet Fork<a class="headerlink" href="#mainnet-fork" title="Link to this heading"></a></h2>
+<h2>Mainnet Fork<a class="headerlink" href="#mainnet-fork" title="Link to this heading">#</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">ape-foundry</span></code> plugin also includes a mainnet fork provider.
 It requires using another provider that has access to mainnet.</p>
 <p>Use it in most commands like this:</p>
@@ -245,7 +230,7 @@ You can also specify a <code class="docutils literal notranslate"><span class="p
 </div>
 </section>
 <section id="remote-anvil-node">
-<h2>Remote Anvil Node<a class="headerlink" href="#remote-anvil-node" title="Link to this heading"></a></h2>
+<h2>Remote Anvil Node<a class="headerlink" href="#remote-anvil-node" title="Link to this heading">#</a></h2>
 <p>To connect to a remote anvil node, set up your config like this:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
 </span><span data-line="2"><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://anvil.example.com</span>
@@ -258,14 +243,15 @@ You can also specify a <code class="docutils literal notranslate"><span class="p
 </div>
 </section>
 <section id="impersonate-accounts">
-<h2>Impersonate Accounts<a class="headerlink" href="#impersonate-accounts" title="Link to this heading"></a></h2>
+<h2>Impersonate Accounts<a class="headerlink" href="#impersonate-accounts" title="Link to this heading">#</a></h2>
 <p>You can impersonate accounts using the <code class="docutils literal notranslate"><span class="pre">ape-foundry</span></code> plugin.
 To impersonate an account, do the following:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
 </span><span data-line="2">
-</span><span data-line="3"><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
-</span><span data-line="4"><span class="k">def</span><span class="w"> </span><span class="nf">whale</span><span class="p">(</span><span class="n">accounts</span><span class="p">):</span>
-</span><span data-line="5">    <span class="k">return</span> <span class="n">accounts</span><span class="p">[</span><span class="s2">&quot;example.eth&quot;</span><span class="p">]</span>
+</span><span data-line="3">
+</span><span data-line="4"><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+</span><span data-line="5"><span class="k">def</span><span class="w"> </span><span class="nf">whale</span><span class="p">(</span><span class="n">accounts</span><span class="p">):</span>
+</span><span data-line="6">    <span class="k">return</span> <span class="n">accounts</span><span class="p">[</span><span class="s2">"example.eth"</span><span class="p">]</span>
 </span></pre></div>
 </div>
 <p>To transact, your impersonated account must have a balance.
@@ -274,13 +260,13 @@ Alternatively, you can set your node’s base fee and priority fee to <code clas
 <p>To programtically set an account’s balance, do the following:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="kn">from</span><span class="w"> </span><span class="nn">ape</span><span class="w"> </span><span class="kn">import</span> <span class="n">accounts</span>
 </span><span data-line="2">
-</span><span data-line="3"><span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="p">[</span><span class="s2">&quot;example.eth&quot;</span><span class="p">]</span>
-</span><span data-line="4"><span class="n">account</span><span class="o">.</span><span class="n">balance</span> <span class="o">=</span> <span class="s2">&quot;1000 ETH&quot;</span>  <span class="c1"># This calls `anvil_setBalance` under-the-hood.</span>
+</span><span data-line="3"><span class="n">account</span> <span class="o">=</span> <span class="n">accounts</span><span class="p">[</span><span class="s2">"example.eth"</span><span class="p">]</span>
+</span><span data-line="4"><span class="n">account</span><span class="o">.</span><span class="n">balance</span> <span class="o">=</span> <span class="s2">"1000 ETH"</span>  <span class="c1"># This calls `anvil_setBalance` under-the-hood.</span>
 </span></pre></div>
 </div>
 </section>
 <section id="base-fee-and-priority-fee">
-<h2>Base Fee and Priority Fee<a class="headerlink" href="#base-fee-and-priority-fee" title="Link to this heading"></a></h2>
+<h2>Base Fee and Priority Fee<a class="headerlink" href="#base-fee-and-priority-fee" title="Link to this heading">#</a></h2>
 <p>Configure your node’s base fee and priority fee using the <code class="docutils literal notranslate"><span class="pre">ape-config.yaml</span></code> file.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
 </span><span data-line="2"><span class="w">  </span><span class="nt">base_fee</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
@@ -289,7 +275,7 @@ Alternatively, you can set your node’s base fee and priority fee to <code clas
 </div>
 </section>
 <section id="auto-mining">
-<h2>Auto-mining<a class="headerlink" href="#auto-mining" title="Link to this heading"></a></h2>
+<h2>Auto-mining<a class="headerlink" href="#auto-mining" title="Link to this heading">#</a></h2>
 <p>Anvil nodes by default auto-mine.
 However, you can disable auto-mining on startup by configuring the foundry plugin like so:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
@@ -304,7 +290,7 @@ However, you can disable auto-mining on startup by configuring the foundry plugi
 </span></pre></div>
 </div>
 <section id="mine-on-an-interval">
-<h3>Mine on an interval<a class="headerlink" href="#mine-on-an-interval" title="Link to this heading"></a></h3>
+<h3>Mine on an interval<a class="headerlink" href="#mine-on-an-interval" title="Link to this heading">#</a></h3>
 <p>By default, Anvil will mine a new block every time a transaction is submitted.
 To mine on an interval instead, set the <code class="docutils literal notranslate"><span class="pre">block_time</span></code> config:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
@@ -314,7 +300,7 @@ To mine on an interval instead, set the <code class="docutils literal notranslat
 </section>
 </section>
 <section id="evm-version-hardfork">
-<h2>EVM Version (hardfork)<a class="headerlink" href="#evm-version-hardfork" title="Link to this heading"></a></h2>
+<h2>EVM Version (hardfork)<a class="headerlink" href="#evm-version-hardfork" title="Link to this heading">#</a></h2>
 <p>To change the EVM version for local foundry networks, use the <code class="docutils literal notranslate"><span class="pre">evm_version</span></code> config:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="nt">foundry</span><span class="p">:</span>
 </span><span data-line="2"><span class="w">  </span><span class="nt">evm_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shanghai</span>
@@ -349,7 +335,7 @@ To mine on an interval instead, set the <code class="docutils literal notranslat
 <footer class="sy-foot">
   <div class="sy-foot-inner sy-container mx-auto">
     <div class="sy-foot-reserved md:flex justify-between items-center">
-      <div class="sy-foot-copyright"><p>2024, ApeWorX LTD</p>
+      <div class="sy-foot-copyright"><p>2026, ApeWorX LTD</p>
   
   <p>
     Made with
@@ -369,5 +355,5 @@ To mine on an interval instead, set the <code class="docutils literal notranslat
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script data-domain="docs.apeworx.io" defer="defer" src="https://plausible.io/js/script.js"></script>
-      <script src="../_static/shibuya.js?v=cac61aee"></script></body>
+      <script src="../_static/shibuya.js?v=50760d75"></script></body>
 </html>

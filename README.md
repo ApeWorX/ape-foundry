@@ -113,6 +113,7 @@ To impersonate an account, do the following:
 ```python
 import pytest
 
+
 @pytest.fixture
 def whale(accounts):
     return accounts["example.eth"]

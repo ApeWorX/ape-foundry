@@ -68,28 +68,27 @@ def __getattr__(name: str):
 
         return FoundryForkProvider
 
-    elif name == "FoundryNetworkConfig":
+    if name == "FoundryNetworkConfig":
         from ape_foundry.provider import FoundryNetworkConfig
 
         return FoundryNetworkConfig
 
-    elif name == "FoundryProvider":
+    if name == "FoundryProvider":
         from ape_foundry.provider import FoundryProvider
 
         return FoundryProvider
 
-    elif name == "FoundryProviderError":
+    if name == "FoundryProviderError":
         from ape_foundry.provider import FoundryProviderError
 
         return FoundryProviderError
 
-    elif name == "FoundrySubprocessError":
+    if name == "FoundrySubprocessError":
         from ape_foundry.provider import FoundrySubprocessError
 
         return FoundrySubprocessError
 
-    else:
-        raise AttributeError(name)
+    raise AttributeError(name)
 
 
 __all__ = [

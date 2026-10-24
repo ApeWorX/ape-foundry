@@ -31,7 +31,7 @@ def pytest_runtest_makereport(item, call):
     tr = orig_pytest_runtest_makereport(item, call)
     if call.excinfo is not None and "too many requests" in str(call.excinfo).lower():
         tr.outcome = "skipped"
-        tr.wasxfail = "reason: Alchemy requests overloaded (likely in CI)"
+        tr.wasxfail = "reason: upstream RPC overloaded (likely in CI)"
 
     return tr
 

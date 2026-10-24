@@ -129,3 +129,9 @@ node_modules/
 **/.DS_Store
 *.swp
 *.swo
+
+# uv (do not commit lockfiles — ApeWorX packaging standard)
+uv.lock
+
+# ruff
+.ruff_cache/

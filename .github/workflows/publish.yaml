@@ -4,24 +4,12 @@ on:
   release:
     types: [published]
 
+# Thin caller: release trigger stays here; job body lives in
+# ApeWorX/.github/.github/workflows/publish.yaml
+# Merge ApeWorX/.github#4 before merging this PR.
 jobs:
   deploy:
-
-    runs-on: ubuntu-latest
-
+    uses: ApeWorX/.github/.github/workflows/publish.yaml@main
     permissions:
+      contents: read
       id-token: write
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        python-version: "3.10"
-
-    - name: Build
-      run: uv build
-
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1

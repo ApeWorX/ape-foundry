@@ -152,7 +152,7 @@ def test_get_transaction_trace_call_tree(connected_provider, sender, receiver):
     assert isinstance(trace, Trace)
     call_tree = trace.get_calltree()
     assert call_tree.call_type == CallType.CALL
-    assert repr(trace) == "__ETH_transfer__.0x() 1"
+    assert repr(trace) == "__ETH_transfer__.0x() 1 [0 gas]"
 
 
 def test_request_timeout(connected_provider, project):

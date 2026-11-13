@@ -75,6 +75,16 @@ def test_mine(connected_provider):
     assert next_block_num > block_num
 
 
+@pytest.mark.parametrize("interval", [0, 10])
+def test_mine_interval(connected_provider, interval):
+    connected_provider.mine(3, interval=interval)
+    latest = connected_provider.get_block("latest")
+    first = connected_provider.get_block(latest.number - 2)
+    middle = connected_provider.get_block(latest.number - 1)
+    assert middle.timestamp - first.timestamp == interval
+    assert latest.timestamp - middle.timestamp == interval
+
+
 def test_restore_failure(connected_provider):
     assert connected_provider.restore(0xFFFF) is False
 

@@ -526,10 +526,9 @@ class FoundryProvider(SubprocessProvider, Web3Provider, TestProviderAPI):
     def set_timestamp(self, new_timestamp: int):
         self.make_request("evm_setNextBlockTimestamp", [new_timestamp])
 
-    def mine(self, num_blocks: int = 1):
-        # NOTE: Request fails when given numbers with any left padded 0s.
-        num_blocks_arg = f"0x{HexBytes(num_blocks).hex().replace('0x', '').lstrip('0')}"
-        self.make_request("anvil_mine", [num_blocks_arg])
+    def mine(self, num_blocks: int = 1, interval: int | None = None):
+        params = [hex(num_blocks)] if interval is None else [hex(num_blocks), hex(interval)]
+        self.make_request("anvil_mine", params)
 
     def snapshot(self) -> str:
         return self.make_request("evm_snapshot", [])

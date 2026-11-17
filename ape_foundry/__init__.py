@@ -62,6 +62,13 @@ def providers():
     yield "sonic", "blaze-fork", FoundryForkProvider
 
 
+@plugins.register(plugins.ScriptRunnerPlugin)
+def register_script_runner():
+    from .scripting import ForgeScriptRunner
+
+    return (".s.sol",), ForgeScriptRunner
+
+
 def __getattr__(name: str):
     if name == "FoundryForkProvider":
         from ape_foundry.provider import FoundryForkProvider

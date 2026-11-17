@@ -132,6 +132,17 @@ account = accounts["example.eth"]
 account.balance = "1000 ETH"  # This calls `anvil_setBalance` under-the-hood.
 ```
 
+## Running Foundry Scripts
+
+With this plugin installed, `ape run` also runs Foundry scripts (`.s.sol`) from your project's `script/` folder, through `forge script`, using Ape's network and account selection:
+
+```bash
+ape run Deploy --network ethereum:sepolia:alchemy --account my_account --broadcast
+```
+
+A keyfile account signs with its keystore (forge prompts for the passphrase), a test account with its private key, and an impersonated account through the node's unlocked accounts.
+Leave off `--broadcast` to only simulate; any other arguments go straight to `forge script`.
+
 ## Base Fee and Priority Fee
 
 Configure your node's base fee and priority fee using the `ape-config.yaml` file.
